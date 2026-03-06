@@ -6286,7 +6286,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
       {/* Undo Toast */}
       {undoState && (
         <div style={{
-          position: "fixed", bottom: "76px", left: "50%", transform: "translateX(-50%)",
+          position: "fixed", bottom: "calc(76px + env(safe-area-inset-bottom, 0px))", left: "50%", transform: "translateX(-50%)",
           zIndex: 200, display: "flex", alignItems: "center", gap: "10px",
           padding: "8px 16px",
           background: "rgba(13, 10, 7, 0.92)",
@@ -6313,7 +6313,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
       {/* ═══ AI COMMAND PANEL ═══ */}
       {aiOpen && (
         <div style={{
-          position: "fixed", bottom: "76px", left: "8px", right: "8px",
+          position: "fixed", bottom: "calc(76px + env(safe-area-inset-bottom, 0px))", left: "8px", right: "8px",
           zIndex: 200, maxHeight: "55vh",
           background: "linear-gradient(180deg, rgba(20,16,10,0.98), rgba(10,8,5,0.99))",
           border: "1px solid rgba(245,158,11,0.2)",
@@ -6441,7 +6441,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
 
       {/* Floating AI Fairy Button */}
       <div onClick={() => { setAiOpen(!aiOpen); if (!aiOpen) setTimeout(() => aiInputRef.current?.focus(), 100); }} style={{
-        position: "fixed", bottom: "82px", right: "16px", zIndex: 150,
+        position: "fixed", bottom: "calc(82px + env(safe-area-inset-bottom, 0px))", right: "16px", zIndex: 150,
         width: "48px", height: "48px", borderRadius: "50%",
         background: aiOpen ? "rgba(147,220,255,0.12)" : "rgba(10,8,6,0.7)",
         border: `1px solid ${aiOpen ? "rgba(147,220,255,0.35)" : "rgba(147,220,255,0.15)"}`,
@@ -6531,7 +6531,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
 
 {/* Floating Dock Navigation */}
       <div style={{
-        position: "fixed", bottom: "12px", left: "50%", transform: "translateX(-50%)",
+        position: "fixed", bottom: "calc(12px + env(safe-area-inset-bottom, 0px))", left: "50%", transform: "translateX(-50%)",
         zIndex: 100, display: "flex", gap: "2px", padding: "6px 10px",
         background: "rgba(13, 10, 7, 0.9)",
         backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
