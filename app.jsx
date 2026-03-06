@@ -3603,6 +3603,15 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
           opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(-20px)",
           transition: "all 0.8s cubic-bezier(0.4, 0, 0.2, 1)",
         }}>
+          {/* Settings hamburger button */}
+          <div onClick={() => setShowSettings(true)} style={{
+            position: 'absolute', top: '50%', left: '16px', transform: 'translateY(-50%)',
+            width: '36px', height: '36px', display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center', gap: '4px', cursor: 'pointer',
+            opacity: 0.7, transition: 'opacity 0.2s',
+          }}>
+            {[0,1,2].map(i => <div key={i} style={{ width: '20px', height: '2px', background: '#c9b458', borderRadius: '1px' }} />)}
+          </div>
           <div style={{
             fontSize: "8px", color: "#8a7a65", letterSpacing: "4px", fontFamily: "'Cinzel', serif",
             textTransform: "uppercase", marginBottom: "2px",
