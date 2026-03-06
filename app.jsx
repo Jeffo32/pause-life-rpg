@@ -2084,7 +2084,7 @@ function QuestCreator({ onSave, onCancel, generateSteps, isGenerating, initialVa
     try {
       const response = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-api-key": localStorage.getItem("rpg-api-key") || "", "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
           max_tokens: 1000,
@@ -2395,6 +2395,27 @@ function App() {
   const lastHoverSlotRef = useRef(null);
   const scrollContainerRef = useRef(null);
   const autoScrollRef = useRef(null);
+
+  // ── Settings State ──
+  const [showSettings, setShowSettings] = useState(false);
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem("rpg-api-key") || "");
+  const [apiKeyLocked, setApiKeyLocked] = useState(() => !!localStorage.getItem("rpg-api-key"));
+  const [brightness, setBrightness] = useState(() => {
+    const saved = localStorage.getItem("rpg-brightness");
+    return saved ? parseFloat(saved) : 1;
+  });
+  const [appTheme, setAppTheme] = useState(() => localStorage.getItem("rpg-theme") || "dark-fantasy");
+  const importBackupRef = useRef(null);
+
+  // Persist brightness
+  useEffect(() => {
+    localStorage.setItem("rpg-brightness", String(brightness));
+  }, [brightness]);
+
+  // Persist theme
+  useEffect(() => {
+    localStorage.setItem("rpg-theme", appTheme);
+  }, [appTheme]);
 
   // Global drag management: scroll prevention, auto-scroll, ghost position, haptics, drop
   useEffect(() => {
@@ -2832,6 +2853,11 @@ function App() {
 
   const sendAiMessage = useCallback(async () => {
     if (!aiInput.trim() || aiLoading) return;
+    if (!localStorage.getItem("rpg-api-key")) {
+      setAiMessages(prev => [...prev, { role: "user", text: aiInput.trim() }, { role: "assistant", text: "I need an API key to awaken, Adventurer. Open Settings (hamburger menu, top-left) and enter your Anthropic API key under Navi Connection." }]);
+      setAiInput("");
+      return;
+    }
     const userMsg = aiInput.trim();
     setAiInput("");
     const newMsgs = [...aiMessages, { role: "user", text: userMsg }];
@@ -2954,7 +2980,7 @@ If no actions needed, return empty actions array. Keep message brief and in-char
 
       const response = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-api-key": localStorage.getItem("rpg-api-key") || "", "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
           max_tokens: 1000,
@@ -3057,7 +3083,7 @@ If no actions needed, return empty actions array. Keep message brief and in-char
           const focusCat = yCats.length > 0 ? yCats[Math.floor(Math.random() * yCats.length)] : "mind";
           const catLabel = SKILL_CATEGORIES_DATA[focusCat]?.label || "Growth";
           const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
-            method: "POST", headers: { "Content-Type": "application/json" },
+            method: "POST", headers: { "Content-Type": "application/json", "x-api-key": localStorage.getItem("rpg-api-key") || "", "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
             body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 200,
               messages: [{ role: "user", content: "Generate one motivational quote for a dark fantasy RPG life app. Theme: " + catLabel + ". User is an entrepreneur-creator focused on sovereignty, execution, family legacy. Respond ONLY with JSON no backticks: " + JSON.stringify({quote:"under 15 words",category:catLabel,rarity:"common|rare|epic|legendary"}) }],
             }),
@@ -3231,7 +3257,7 @@ If no actions needed, return empty actions array. Keep message brief and in-char
     try {
       const response = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-api-key": localStorage.getItem("rpg-api-key") || "", "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
           max_tokens: 1000,
@@ -3325,6 +3351,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
       background: "radial-gradient(ellipse at 50% 0%, #1a150e 0%, #0d0a07 50%, #050403 100%)",
       color: "#e8d5b5", fontFamily: "'Crimson Text', serif",
       position: "relative", overflow: "hidden",
+      filter: brightness !== 1 ? `brightness(${brightness})` : undefined,
     }}>
       <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@400;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Fira+Code:wght@400&display=swap" rel="stylesheet" />
 
@@ -3341,6 +3368,145 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
           pointerEvents: 'none',
           animation: 'fadeIn 0.3s ease',
         }} />
+      )}
+
+      {/* ═══ SETTINGS PANEL ═══ */}
+      {showSettings && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          {/* Backdrop */}
+          <div onClick={() => setShowSettings(false)} style={{
+            position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)',
+          }} />
+          {/* Panel */}
+          <div style={{
+            position: 'relative', width: '90%', maxWidth: '400px', maxHeight: '85vh', overflowY: 'auto',
+            background: 'linear-gradient(145deg, rgba(26,21,14,0.98), rgba(13,10,7,0.98))',
+            border: '1px solid rgba(245,158,11,0.3)', borderRadius: '16px',
+            padding: '24px 20px', boxShadow: '0 0 60px rgba(0,0,0,0.8), 0 0 30px rgba(245,158,11,0.1)',
+          }}>
+            {/* Close button */}
+            <div onClick={() => setShowSettings(false)} style={{
+              position: 'absolute', top: '12px', right: '12px', width: '28px', height: '28px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+              color: '#8a7a65', fontSize: '18px', opacity: 0.7,
+            }}>✕</div>
+
+            <h2 style={{
+              margin: '0 0 20px', fontSize: '18px', fontFamily: "'Cinzel Decorative', serif",
+              color: '#f5c842', letterSpacing: '2px', textAlign: 'center',
+              textShadow: '0 0 20px rgba(245,158,11,0.3)',
+            }}>Settings</h2>
+
+            {/* ── Data Backup ── */}
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ fontSize: '11px', color: '#8a7a65', letterSpacing: '2px', fontFamily: "'Cinzel', serif", marginBottom: '10px', textTransform: 'uppercase' }}>Data Backup</div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button onClick={() => { exportAllData(); }} style={{
+                  flex: 1, padding: '10px', background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)',
+                  borderRadius: '10px', color: '#4ade80', fontFamily: "'Cinzel', serif", fontSize: '13px',
+                  cursor: 'pointer', letterSpacing: '1px',
+                }}>SAVE</button>
+                <button onClick={() => importBackupRef.current?.click()} style={{
+                  flex: 1, padding: '10px', background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)',
+                  borderRadius: '10px', color: '#60a5fa', fontFamily: "'Cinzel', serif", fontSize: '13px',
+                  cursor: 'pointer', letterSpacing: '1px',
+                }}>LOAD</button>
+                <input ref={importBackupRef} type="file" accept=".json" style={{ display: 'none' }} onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  try {
+                    const count = await importAllData(file);
+                    alert(`Restored ${count} data keys. Reloading...`);
+                    window.location.reload();
+                  } catch (err) { alert("Import failed: " + err.message); }
+                  e.target.value = "";
+                }} />
+              </div>
+            </div>
+
+            {/* ── API Key ── */}
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ fontSize: '11px', color: '#8a7a65', letterSpacing: '2px', fontFamily: "'Cinzel', serif", marginBottom: '10px', textTransform: 'uppercase' }}>Navi Connection</div>
+              {apiKeyLocked ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{
+                    flex: 1, padding: '10px 14px', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)',
+                    borderRadius: '10px', color: '#4ade80', fontSize: '12px', fontFamily: "'Fira Code', monospace",
+                  }}>API Key Connected</div>
+                  <button onClick={() => { setApiKeyLocked(false); setApiKey(""); localStorage.removeItem("rpg-api-key"); }} style={{
+                    padding: '10px 14px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)',
+                    borderRadius: '10px', color: '#f87171', fontSize: '11px', fontFamily: "'Cinzel', serif",
+                    cursor: 'pointer', whiteSpace: 'nowrap',
+                  }}>Remove</button>
+                </div>
+              ) : (
+                <div>
+                  <input
+                    type="password"
+                    placeholder="sk-ant-... (Anthropic API Key)"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    style={{
+                      width: '100%', padding: '10px 14px', background: 'rgba(0,0,0,0.4)',
+                      border: '1px solid rgba(245,158,11,0.2)', borderRadius: '10px',
+                      color: '#e8d5b0', fontSize: '12px', fontFamily: "'Fira Code', monospace",
+                      outline: 'none', marginBottom: '8px',
+                    }}
+                  />
+                  <button onClick={() => {
+                    if (apiKey.trim()) {
+                      localStorage.setItem("rpg-api-key", apiKey.trim());
+                      setApiKeyLocked(true);
+                    }
+                  }} style={{
+                    width: '100%', padding: '10px', background: apiKey.trim() ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.05)',
+                    border: '1px solid ' + (apiKey.trim() ? 'rgba(245,158,11,0.4)' : 'rgba(255,255,255,0.1)'),
+                    borderRadius: '10px', color: apiKey.trim() ? '#f5c842' : '#555',
+                    fontFamily: "'Cinzel', serif", fontSize: '13px', cursor: apiKey.trim() ? 'pointer' : 'default',
+                    letterSpacing: '1px', transition: 'all 0.2s',
+                  }}>Connect</button>
+                  <div style={{ fontSize: '10px', color: '#5a4a35', marginTop: '6px', lineHeight: 1.4 }}>
+                    Your key is stored locally on this device only. Get one at console.anthropic.com
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ── Brightness ── */}
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ fontSize: '11px', color: '#8a7a65', letterSpacing: '2px', fontFamily: "'Cinzel', serif", marginBottom: '10px', textTransform: 'uppercase' }}>
+                Brightness — {Math.round(brightness * 100)}%
+              </div>
+              <input
+                type="range" min="0.3" max="1.3" step="0.05" value={brightness}
+                onChange={(e) => setBrightness(parseFloat(e.target.value))}
+                style={{ width: '100%', accentColor: '#f59e0b' }}
+              />
+            </div>
+
+            {/* ── Theme (placeholder) ── */}
+            <div style={{ marginBottom: '8px' }}>
+              <div style={{ fontSize: '11px', color: '#8a7a65', letterSpacing: '2px', fontFamily: "'Cinzel', serif", marginBottom: '10px', textTransform: 'uppercase' }}>App Theme</div>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {[
+                  { id: 'dark-fantasy', label: 'Dark Fantasy', color: '#f59e0b' },
+                  { id: 'midnight', label: 'Midnight', color: '#6366f1' },
+                  { id: 'blood-moon', label: 'Blood Moon', color: '#ef4444' },
+                  { id: 'forest', label: 'Forest', color: '#22c55e' },
+                ].map(t => (
+                  <button key={t.id} onClick={() => setAppTheme(t.id)} style={{
+                    flex: '1 1 45%', padding: '10px 8px', background: appTheme === t.id ? `rgba(${t.id === 'dark-fantasy' ? '245,158,11' : t.id === 'midnight' ? '99,102,241' : t.id === 'blood-moon' ? '239,68,68' : '34,197,94'},0.15)` : 'rgba(0,0,0,0.3)',
+                    border: `1px solid ${appTheme === t.id ? t.color : 'rgba(255,255,255,0.08)'}`,
+                    borderRadius: '10px', color: appTheme === t.id ? t.color : '#5a4a35',
+                    fontFamily: "'Cinzel', serif", fontSize: '11px', cursor: 'pointer',
+                    transition: 'all 0.2s', letterSpacing: '0.5px',
+                  }}>{t.label}</button>
+                ))}
+              </div>
+              <div style={{ fontSize: '10px', color: '#5a4a35', marginTop: '6px' }}>More themes coming soon</div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Ambient vignette */}
@@ -3363,6 +3529,17 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
           opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(-20px)",
           transition: "all 0.8s cubic-bezier(0.4, 0, 0.2, 1)",
         }}>
+          {/* Settings hamburger button */}
+          <div onClick={() => setShowSettings(true)} style={{
+            position: 'absolute', top: '50%', left: '16px', transform: 'translateY(-50%)',
+            width: '36px', height: '36px', display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center', gap: '4px', cursor: 'pointer',
+            opacity: 0.7, transition: 'opacity 0.2s',
+          }}>
+            <div style={{ width: '18px', height: '2px', background: '#8a7a65', borderRadius: '1px' }} />
+            <div style={{ width: '18px', height: '2px', background: '#8a7a65', borderRadius: '1px' }} />
+            <div style={{ width: '18px', height: '2px', background: '#8a7a65', borderRadius: '1px' }} />
+          </div>
           <div style={{
             fontSize: "8px", color: "#8a7a65", letterSpacing: "4px", fontFamily: "'Cinzel', serif",
             textTransform: "uppercase", marginBottom: "2px",
