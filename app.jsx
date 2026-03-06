@@ -2077,6 +2077,14 @@ function QuestCreator({ onSave, onCancel, generateSteps, isGenerating, initialVa
 
   const removeStep = (idx) => setSteps(prev => prev.filter((_, i) => i !== idx));
 
+  const formatApiError = (errMsg) => {
+    if (/credit balance/i.test(errMsg)) return "Your API key's workspace has no credits. Go to console.anthropic.com → check the workspace (top-left) → Plans & Billing to add credits. Note: each workspace has its own balance.";
+    if (/invalid.*key|authentication|unauthorized/i.test(errMsg)) return "Invalid API key. Go to console.anthropic.com → API Keys to get a valid key, then update it in Settings.";
+    if (/rate limit|too many/i.test(errMsg)) return "Rate limited — too many requests. Wait a moment and try again.";
+    if (/overloaded/i.test(errMsg)) return "Claude is currently overloaded. Try again in a few seconds.";
+    return errMsg + " Check your API key in Settings.";
+  };
+
   const handleSmartBuild = async () => {
     const input = aiPrompt.trim() || name.trim();
     if (!input || aiBuilding) return;
@@ -2112,7 +2120,7 @@ Respond with ONLY valid JSON, no markdown or backticks:
         }),
       });
       const data = await response.json();
-      if (data.error) throw new Error(data.error.message || "API error — check your API key in Settings");
+      if (data.error) throw new Error(formatApiError(data.error.message || data.error.type || "Unknown API error"));
       const rawText = data.content?.map(c => c.text || "").join("") || "";
       const parsed = JSON.parse(rawText.replace(/```json|```/g, "").trim());
 
@@ -2998,7 +3006,7 @@ If no actions needed, return empty actions array. Keep message brief and in-char
       // Check for API errors
       if (data.error) {
         const errMsg = data.error.message || data.error.type || "Unknown API error";
-        setAiMessages(prev => [...prev, { role: "assistant", text: `API error: ${errMsg}. Check your API key in Settings.` }]);
+        setAiMessages(prev => [...prev, { role: "assistant", text: formatApiError(errMsg) }]);
         setAiLoading(false);
         return;
       }
@@ -3284,7 +3292,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
         }),
       });
       const data = await response.json();
-      if (data.error) throw new Error(data.error.message || "API error");
+      if (data.error) throw new Error(formatApiError(data.error.message || data.error.type || "Unknown API error"));
       const text = data.content?.map(i => i.text || "").join("") || "[]";
       const clean = text.replace(/```json|```/g, "").trim();
       const steps = JSON.parse(clean);
