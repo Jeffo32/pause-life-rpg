@@ -3581,7 +3581,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
         {/* Title Banner — Liquid Glass (fixed) */}
         <div style={{
           position: "fixed", top: 0, left: 0, right: 0, zIndex: 50,
-          textAlign: "center", padding: "14px 0 14px",
+          textAlign: "center", padding: "calc(14px + env(safe-area-inset-top, 0px)) 0 14px",
           background: "linear-gradient(180deg, rgba(13,10,7,0.9) 0%, rgba(13,10,7,0.7) 60%, rgba(13,10,7,0) 100%)",
           backdropFilter: "blur(24px) saturate(1.4)",
           WebkitBackdropFilter: "blur(24px) saturate(1.4)",
@@ -3641,7 +3641,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
         </div>
 
         {/* Spacer for fixed header */}
-        <div style={{ height: "70px" }} />
+        <div style={{ height: "calc(70px + env(safe-area-inset-top, 0px))" }} />
 
         {/* ═══ CHARACTER TAB ═══ */}
         {activeTab === "character" && (
