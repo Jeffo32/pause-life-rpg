@@ -2077,6 +2077,37 @@ function QuestCreator({ onSave, onCancel, generateSteps, isGenerating, initialVa
 
   const removeStep = (idx) => setSteps(prev => prev.filter((_, i) => i !== idx));
 
+  const testApiConnection = useCallback(async () => {
+    setApiTesting(true);
+    setApiTestResult(null);
+    try {
+      const key = localStorage.getItem("rpg-api-key") || "";
+      if (!key) { setApiTestResult({ ok: false, msg: "No API key stored." }); setApiTesting(false); return; }
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+        body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 10, messages: [{ role: "user", content: "Say hi" }] }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        setApiTestResult({ ok: false, msg: data.error.message || data.error.type || "Unknown error" });
+      } else {
+        setApiTestResult({ ok: true, msg: "Connection successful!" });
+      }
+    } catch (err) {
+      setApiTestResult({ ok: false, msg: "Network error: " + err.message });
+    }
+    setApiTesting(false);
+  }, []);
+
+  const formatApiError = (errMsg) => {
+    if (/credit balance/i.test(errMsg)) return "Your API key's workspace has no credits. Go to console.anthropic.com → check the workspace (top-left) → Plans & Billing to add credits. Note: each workspace has its own balance.";
+    if (/invalid.*key|authentication|unauthorized/i.test(errMsg)) return "Invalid API key. Go to console.anthropic.com → API Keys to get a valid key, then update it in Settings.";
+    if (/rate limit|too many/i.test(errMsg)) return "Rate limited — too many requests. Wait a moment and try again.";
+    if (/overloaded/i.test(errMsg)) return "Claude is currently overloaded. Try again in a few seconds.";
+    return errMsg + " Check your API key in Settings.";
+  };
+
   const handleSmartBuild = async () => {
     const input = aiPrompt.trim() || name.trim();
     if (!input || aiBuilding) return;
@@ -2112,6 +2143,7 @@ Respond with ONLY valid JSON, no markdown or backticks:
         }),
       });
       const data = await response.json();
+      if (data.error) throw new Error(formatApiError(data.error.message || data.error.type || "Unknown API error"));
       const rawText = data.content?.map(c => c.text || "").join("") || "";
       const parsed = JSON.parse(rawText.replace(/```json|```/g, "").trim());
 
@@ -2414,6 +2446,29 @@ function App() {
   const lastHoverSlotRef = useRef(null);
   const scrollContainerRef = useRef(null);
   const autoScrollRef = useRef(null);
+
+  // ── Settings State ──
+  const [showSettings, setShowSettings] = useState(false);
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem("rpg-api-key") || "");
+  const [apiKeyLocked, setApiKeyLocked] = useState(() => !!localStorage.getItem("rpg-api-key"));
+  const [apiTestResult, setApiTestResult] = useState(null);
+  const [apiTesting, setApiTesting] = useState(false);
+  const [brightness, setBrightness] = useState(() => {
+    const saved = localStorage.getItem("rpg-brightness");
+    return saved ? parseFloat(saved) : 1;
+  });
+  const [appTheme, setAppTheme] = useState(() => localStorage.getItem("rpg-theme") || "dark-fantasy");
+  const importBackupRef = useRef(null);
+
+  // Persist brightness
+  useEffect(() => {
+    localStorage.setItem("rpg-brightness", String(brightness));
+  }, [brightness]);
+
+  // Persist theme
+  useEffect(() => {
+    localStorage.setItem("rpg-theme", appTheme);
+  }, [appTheme]);
 
   // Global drag management: scroll prevention, auto-scroll, ghost position, haptics, drop
   useEffect(() => {
@@ -2985,6 +3040,15 @@ If no actions needed, return empty actions array. Keep message brief and in-char
       });
 
       const data = await response.json();
+
+      // Check for API errors
+      if (data.error) {
+        const errMsg = data.error.message || data.error.type || "Unknown API error";
+        setAiMessages(prev => [...prev, { role: "assistant", text: formatApiError(errMsg) }]);
+        setAiLoading(false);
+        return;
+      }
+
       const rawText = data.content?.map(c => c.text || "").join("") || "";
 
       // Parse JSON response
@@ -3266,6 +3330,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
         }),
       });
       const data = await response.json();
+      if (data.error) throw new Error(formatApiError(data.error.message || data.error.type || "Unknown API error"));
       const text = data.content?.map(i => i.text || "").join("") || "[]";
       const clean = text.replace(/```json|```/g, "").trim();
       const steps = JSON.parse(clean);
@@ -3363,6 +3428,161 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
         }} />
       )}
 
+      {/* ═══ SETTINGS PANEL ═══ */}
+      {showSettings && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          {/* Backdrop */}
+          <div onClick={() => setShowSettings(false)} style={{
+            position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)',
+          }} />
+          {/* Panel */}
+          <div style={{
+            position: 'relative', width: '90%', maxWidth: '400px', maxHeight: '85vh', overflowY: 'auto',
+            background: 'linear-gradient(145deg, rgba(26,21,14,0.98), rgba(13,10,7,0.98))',
+            border: '1px solid rgba(245,158,11,0.3)', borderRadius: '16px',
+            padding: '24px 20px', boxShadow: '0 0 60px rgba(0,0,0,0.8), 0 0 30px rgba(245,158,11,0.1)',
+          }}>
+            {/* Close button */}
+            <div onClick={() => setShowSettings(false)} style={{
+              position: 'absolute', top: '12px', right: '12px', width: '28px', height: '28px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+              color: '#8a7a65', fontSize: '18px', opacity: 0.7,
+            }}>✕</div>
+
+            <h2 style={{
+              margin: '0 0 20px', fontSize: '18px', fontFamily: "'Cinzel Decorative', serif",
+              color: '#f5c842', letterSpacing: '2px', textAlign: 'center',
+              textShadow: '0 0 20px rgba(245,158,11,0.3)',
+            }}>Settings</h2>
+
+            {/* ── Data Backup ── */}
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ fontSize: '11px', color: '#8a7a65', letterSpacing: '2px', fontFamily: "'Cinzel', serif", marginBottom: '10px', textTransform: 'uppercase' }}>Data Backup</div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button onClick={() => { exportAllData(); }} style={{
+                  flex: 1, padding: '10px', background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)',
+                  borderRadius: '10px', color: '#4ade80', fontFamily: "'Cinzel', serif", fontSize: '13px',
+                  cursor: 'pointer', letterSpacing: '1px',
+                }}>SAVE</button>
+                <button onClick={() => importBackupRef.current?.click()} style={{
+                  flex: 1, padding: '10px', background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)',
+                  borderRadius: '10px', color: '#60a5fa', fontFamily: "'Cinzel', serif", fontSize: '13px',
+                  cursor: 'pointer', letterSpacing: '1px',
+                }}>LOAD</button>
+                <input ref={importBackupRef} type="file" accept=".json" style={{ display: 'none' }} onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  try {
+                    const count = await importAllData(file);
+                    alert(`Restored ${count} data keys. Reloading...`);
+                    window.location.reload();
+                  } catch (err) { alert("Import failed: " + err.message); }
+                  e.target.value = "";
+                }} />
+              </div>
+            </div>
+
+            {/* ── API Key ── */}
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ fontSize: '11px', color: '#8a7a65', letterSpacing: '2px', fontFamily: "'Cinzel', serif", marginBottom: '10px', textTransform: 'uppercase' }}>Navi Connection</div>
+              {apiKeyLocked ? (
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                    <div style={{
+                      flex: 1, padding: '10px 14px', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)',
+                      borderRadius: '10px', color: '#4ade80', fontSize: '12px', fontFamily: "'Fira Code', monospace",
+                    }}>API Key Connected</div>
+                    <button onClick={() => { setApiKeyLocked(false); setApiKey(""); localStorage.removeItem("rpg-api-key"); setApiTestResult(null); }} style={{
+                      padding: '10px 14px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)',
+                      borderRadius: '10px', color: '#f87171', fontSize: '11px', fontFamily: "'Cinzel', serif",
+                      cursor: 'pointer', whiteSpace: 'nowrap',
+                    }}>Remove</button>
+                  </div>
+                  <button onClick={testApiConnection} disabled={apiTesting} style={{
+                    width: '100%', padding: '8px', background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)',
+                    borderRadius: '10px', color: '#a5b4fc', fontSize: '11px', fontFamily: "'Cinzel', serif",
+                    cursor: apiTesting ? 'wait' : 'pointer', letterSpacing: '1px', transition: 'all 0.2s',
+                  }}>{apiTesting ? "Testing..." : "Test Connection"}</button>
+                  {apiTestResult && (
+                    <div style={{
+                      marginTop: '6px', padding: '8px 12px', borderRadius: '8px', fontSize: '11px', lineHeight: 1.4,
+                      background: apiTestResult.ok ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
+                      border: '1px solid ' + (apiTestResult.ok ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'),
+                      color: apiTestResult.ok ? '#4ade80' : '#f87171',
+                      fontFamily: "'Fira Code', monospace", wordBreak: 'break-word',
+                    }}>{apiTestResult.msg}</div>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <input
+                    type="password"
+                    placeholder="sk-ant-... (Anthropic API Key)"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    style={{
+                      width: '100%', padding: '10px 14px', background: 'rgba(0,0,0,0.4)',
+                      border: '1px solid rgba(245,158,11,0.2)', borderRadius: '10px',
+                      color: '#e8d5b0', fontSize: '12px', fontFamily: "'Fira Code', monospace",
+                      outline: 'none', marginBottom: '8px',
+                    }}
+                  />
+                  <button onClick={() => {
+                    if (apiKey.trim()) {
+                      localStorage.setItem("rpg-api-key", apiKey.trim());
+                      setApiKeyLocked(true);
+                    }
+                  }} style={{
+                    width: '100%', padding: '10px', background: apiKey.trim() ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.05)',
+                    border: '1px solid ' + (apiKey.trim() ? 'rgba(245,158,11,0.4)' : 'rgba(255,255,255,0.1)'),
+                    borderRadius: '10px', color: apiKey.trim() ? '#f5c842' : '#555',
+                    fontFamily: "'Cinzel', serif", fontSize: '13px', cursor: apiKey.trim() ? 'pointer' : 'default',
+                    letterSpacing: '1px', transition: 'all 0.2s',
+                  }}>Connect</button>
+                  <div style={{ fontSize: '10px', color: '#5a4a35', marginTop: '6px', lineHeight: 1.4 }}>
+                    Your key is stored locally on this device only. Get one at console.anthropic.com
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ── Brightness ── */}
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ fontSize: '11px', color: '#8a7a65', letterSpacing: '2px', fontFamily: "'Cinzel', serif", marginBottom: '10px', textTransform: 'uppercase' }}>
+                Brightness — {Math.round(brightness * 100)}%
+              </div>
+              <input
+                type="range" min="0.3" max="1.3" step="0.05" value={brightness}
+                onChange={(e) => setBrightness(parseFloat(e.target.value))}
+                style={{ width: '100%', accentColor: '#f59e0b' }}
+              />
+            </div>
+
+            {/* ── Theme (placeholder) ── */}
+            <div style={{ marginBottom: '8px' }}>
+              <div style={{ fontSize: '11px', color: '#8a7a65', letterSpacing: '2px', fontFamily: "'Cinzel', serif", marginBottom: '10px', textTransform: 'uppercase' }}>App Theme</div>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {[
+                  { id: 'dark-fantasy', label: 'Dark Fantasy', color: '#f59e0b' },
+                  { id: 'midnight', label: 'Midnight', color: '#6366f1' },
+                  { id: 'blood-moon', label: 'Blood Moon', color: '#ef4444' },
+                  { id: 'forest', label: 'Forest', color: '#22c55e' },
+                ].map(t => (
+                  <button key={t.id} onClick={() => setAppTheme(t.id)} style={{
+                    flex: '1 1 45%', padding: '10px 8px', background: appTheme === t.id ? `rgba(${t.id === 'dark-fantasy' ? '245,158,11' : t.id === 'midnight' ? '99,102,241' : t.id === 'blood-moon' ? '239,68,68' : '34,197,94'},0.15)` : 'rgba(0,0,0,0.3)',
+                    border: `1px solid ${appTheme === t.id ? t.color : 'rgba(255,255,255,0.08)'}`,
+                    borderRadius: '10px', color: appTheme === t.id ? t.color : '#5a4a35',
+                    fontFamily: "'Cinzel', serif", fontSize: '11px', cursor: 'pointer',
+                    transition: 'all 0.2s', letterSpacing: '0.5px',
+                  }}>{t.label}</button>
+                ))}
+              </div>
+              <div style={{ fontSize: '10px', color: '#5a4a35', marginTop: '6px' }}>More themes coming soon</div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Ambient vignette */}
       <div style={{
         position: "fixed", inset: 0, pointerEvents: "none", zIndex: 1,
@@ -3374,7 +3594,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
         {/* Title Banner — Liquid Glass (fixed) */}
         <div style={{
           position: "fixed", top: 0, left: 0, right: 0, zIndex: 50,
-          textAlign: "center", padding: "14px 0 14px",
+          textAlign: "center", padding: "calc(14px + env(safe-area-inset-top, 0px)) 0 14px",
           background: "linear-gradient(180deg, rgba(13,10,7,0.9) 0%, rgba(13,10,7,0.7) 60%, rgba(13,10,7,0) 100%)",
           backdropFilter: "blur(24px) saturate(1.4)",
           WebkitBackdropFilter: "blur(24px) saturate(1.4)",
@@ -3423,7 +3643,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
         </div>
 
         {/* Spacer for fixed header */}
-        <div style={{ height: "70px" }} />
+        <div style={{ height: "calc(70px + env(safe-area-inset-top, 0px))" }} />
 
         {/* ═══ CHARACTER TAB ═══ */}
         {activeTab === "character" && (
