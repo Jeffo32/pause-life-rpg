@@ -2077,6 +2077,29 @@ function QuestCreator({ onSave, onCancel, generateSteps, isGenerating, initialVa
 
   const removeStep = (idx) => setSteps(prev => prev.filter((_, i) => i !== idx));
 
+  const testApiConnection = useCallback(async () => {
+    setApiTesting(true);
+    setApiTestResult(null);
+    try {
+      const key = localStorage.getItem("rpg-api-key") || "";
+      if (!key) { setApiTestResult({ ok: false, msg: "No API key stored." }); setApiTesting(false); return; }
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+        body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 10, messages: [{ role: "user", content: "Say hi" }] }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        setApiTestResult({ ok: false, msg: data.error.message || data.error.type || "Unknown error" });
+      } else {
+        setApiTestResult({ ok: true, msg: "Connection successful!" });
+      }
+    } catch (err) {
+      setApiTestResult({ ok: false, msg: "Network error: " + err.message });
+    }
+    setApiTesting(false);
+  }, []);
+
   const formatApiError = (errMsg) => {
     if (/credit balance/i.test(errMsg)) return "Your API key's workspace has no credits. Go to console.anthropic.com → check the workspace (top-left) → Plans & Billing to add credits. Note: each workspace has its own balance.";
     if (/invalid.*key|authentication|unauthorized/i.test(errMsg)) return "Invalid API key. Go to console.anthropic.com → API Keys to get a valid key, then update it in Settings.";
@@ -2410,6 +2433,8 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [apiKey, setApiKey] = useState(() => localStorage.getItem("rpg-api-key") || "");
   const [apiKeyLocked, setApiKeyLocked] = useState(() => !!localStorage.getItem("rpg-api-key"));
+  const [apiTestResult, setApiTestResult] = useState(null);
+  const [apiTesting, setApiTesting] = useState(false);
   const [brightness, setBrightness] = useState(() => {
     const saved = localStorage.getItem("rpg-brightness");
     return saved ? parseFloat(saved) : 1;
@@ -3448,16 +3473,32 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
             <div style={{ marginBottom: '20px' }}>
               <div style={{ fontSize: '11px', color: '#8a7a65', letterSpacing: '2px', fontFamily: "'Cinzel', serif", marginBottom: '10px', textTransform: 'uppercase' }}>Navi Connection</div>
               {apiKeyLocked ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{
-                    flex: 1, padding: '10px 14px', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)',
-                    borderRadius: '10px', color: '#4ade80', fontSize: '12px', fontFamily: "'Fira Code', monospace",
-                  }}>API Key Connected</div>
-                  <button onClick={() => { setApiKeyLocked(false); setApiKey(""); localStorage.removeItem("rpg-api-key"); }} style={{
-                    padding: '10px 14px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)',
-                    borderRadius: '10px', color: '#f87171', fontSize: '11px', fontFamily: "'Cinzel', serif",
-                    cursor: 'pointer', whiteSpace: 'nowrap',
-                  }}>Remove</button>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                    <div style={{
+                      flex: 1, padding: '10px 14px', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)',
+                      borderRadius: '10px', color: '#4ade80', fontSize: '12px', fontFamily: "'Fira Code', monospace",
+                    }}>API Key Connected</div>
+                    <button onClick={() => { setApiKeyLocked(false); setApiKey(""); localStorage.removeItem("rpg-api-key"); setApiTestResult(null); }} style={{
+                      padding: '10px 14px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)',
+                      borderRadius: '10px', color: '#f87171', fontSize: '11px', fontFamily: "'Cinzel', serif",
+                      cursor: 'pointer', whiteSpace: 'nowrap',
+                    }}>Remove</button>
+                  </div>
+                  <button onClick={testApiConnection} disabled={apiTesting} style={{
+                    width: '100%', padding: '8px', background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)',
+                    borderRadius: '10px', color: '#a5b4fc', fontSize: '11px', fontFamily: "'Cinzel', serif",
+                    cursor: apiTesting ? 'wait' : 'pointer', letterSpacing: '1px', transition: 'all 0.2s',
+                  }}>{apiTesting ? "Testing..." : "Test Connection"}</button>
+                  {apiTestResult && (
+                    <div style={{
+                      marginTop: '6px', padding: '8px 12px', borderRadius: '8px', fontSize: '11px', lineHeight: 1.4,
+                      background: apiTestResult.ok ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
+                      border: '1px solid ' + (apiTestResult.ok ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'),
+                      color: apiTestResult.ok ? '#4ade80' : '#f87171',
+                      fontFamily: "'Fira Code', monospace", wordBreak: 'break-word',
+                    }}>{apiTestResult.msg}</div>
+                  )}
                 </div>
               ) : (
                 <div>
