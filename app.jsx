@@ -2054,6 +2054,28 @@ function ActionBtn({ onClick, children, danger = false }) {
   );
 }
 
+// ─── ANTHROPIC API HELPER ───────────────────────────────────────────────────
+
+const callClaude = async ({ model, max_tokens, messages, system }) => {
+  const key = localStorage.getItem("rpg-api-key") || "";
+  if (!key) throw new Error("No API key stored. Add your Anthropic API key in Settings.");
+  const body = { model, max_tokens, messages };
+  if (system) body.system = system;
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": key,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true",
+    },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message || data.error.type || "Unknown API error");
+  return data;
+};
+
 // ─── QUEST CREATOR MODAL ────────────────────────────────────────────────────
 
 function QuestCreator({ onSave, onCancel, generateSteps, isGenerating, initialValues }) {
@@ -2076,26 +2098,6 @@ function QuestCreator({ onSave, onCancel, generateSteps, isGenerating, initialVa
   };
 
   const removeStep = (idx) => setSteps(prev => prev.filter((_, i) => i !== idx));
-
-  const callClaude = async ({ model, max_tokens, messages, system }) => {
-    const key = localStorage.getItem("rpg-api-key") || "";
-    if (!key) throw new Error("No API key stored. Add your Anthropic API key in Settings.");
-    const body = { model, max_tokens, messages };
-    if (system) body.system = system;
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": key,
-        "anthropic-version": "2023-06-01",
-        "anthropic-dangerous-direct-browser-access": "true",
-      },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error.message || data.error.type || "Unknown API error");
-    return data;
-  };
 
   const testApiConnection = useCallback(async () => {
     setApiTesting(true);
