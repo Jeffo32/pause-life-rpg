@@ -2076,6 +2076,14 @@ const callClaude = async ({ model, max_tokens, messages, system }) => {
   return data;
 };
 
+const formatApiError = (errMsg) => {
+  if (/credit balance/i.test(errMsg)) return "Your API key's workspace has no credits. Go to console.anthropic.com → check the workspace (top-left) → Plans & Billing to add credits. Note: each workspace has its own balance.";
+  if (/invalid.*key|authentication|unauthorized/i.test(errMsg)) return "Invalid API key. Go to console.anthropic.com → API Keys to get a valid key, then update it in Settings.";
+  if (/rate limit|too many/i.test(errMsg)) return "Rate limited — too many requests. Wait a moment and try again.";
+  if (/overloaded/i.test(errMsg)) return "Claude is currently overloaded. Try again in a few seconds.";
+  return errMsg + " Check your API key in Settings.";
+};
+
 // ─── QUEST CREATOR MODAL ────────────────────────────────────────────────────
 
 function QuestCreator({ onSave, onCancel, generateSteps, isGenerating, initialValues }) {
@@ -2098,37 +2106,6 @@ function QuestCreator({ onSave, onCancel, generateSteps, isGenerating, initialVa
   };
 
   const removeStep = (idx) => setSteps(prev => prev.filter((_, i) => i !== idx));
-
-  const testApiConnection = useCallback(async () => {
-    setApiTesting(true);
-    setApiTestResult(null);
-    try {
-      const key = localStorage.getItem("rpg-api-key") || "";
-      if (!key) { setApiTestResult({ ok: false, msg: "No API key stored." }); setApiTesting(false); return; }
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
-        body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 10, messages: [{ role: "user", content: "Say hi" }] }),
-      });
-      const data = await res.json();
-      if (data.error) {
-        setApiTestResult({ ok: false, msg: data.error.message || data.error.type || "Unknown error" });
-      } else {
-        setApiTestResult({ ok: true, msg: "Connection successful!" });
-      }
-    } catch (err) {
-      setApiTestResult({ ok: false, msg: "Network error: " + err.message });
-    }
-    setApiTesting(false);
-  }, []);
-
-  const formatApiError = (errMsg) => {
-    if (/credit balance/i.test(errMsg)) return "Your API key's workspace has no credits. Go to console.anthropic.com → check the workspace (top-left) → Plans & Billing to add credits. Note: each workspace has its own balance.";
-    if (/invalid.*key|authentication|unauthorized/i.test(errMsg)) return "Invalid API key. Go to console.anthropic.com → API Keys to get a valid key, then update it in Settings.";
-    if (/rate limit|too many/i.test(errMsg)) return "Rate limited — too many requests. Wait a moment and try again.";
-    if (/overloaded/i.test(errMsg)) return "Claude is currently overloaded. Try again in a few seconds.";
-    return errMsg + " Check your API key in Settings.";
-  };
 
   const handleSmartBuild = async () => {
     const input = aiPrompt.trim() || name.trim();
@@ -2475,6 +2452,18 @@ function App() {
   });
   const [appTheme, setAppTheme] = useState(() => localStorage.getItem("rpg-theme") || "dark-fantasy");
   const importBackupRef = useRef(null);
+
+  const testApiConnection = useCallback(async () => {
+    setApiTesting(true);
+    setApiTestResult(null);
+    try {
+      const data = await callClaude({ model: "claude-sonnet-4-20250514", max_tokens: 10, messages: [{ role: "user", content: "Say hi" }] });
+      setApiTestResult({ ok: true, msg: "Connection successful!" });
+    } catch (err) {
+      setApiTestResult({ ok: false, msg: err.message || "Network error" });
+    }
+    setApiTesting(false);
+  }, []);
 
   // Persist brightness
   useEffect(() => {
@@ -3164,7 +3153,7 @@ If no actions needed, return empty actions array. Keep message brief and in-char
 
       setLoading(false);
       // Splash: show title centered, then fly to header while panels zoom in
-      setTimeout(() => setSplashPhase(1), 100);   // title fades in
+      setSplashPhase(1);   // title fades in immediately (no gap)
       setTimeout(() => { setSplashPhase(2); setMounted(true); }, 4500);  // fade out + panels appear
       setTimeout(() => setSplashPhase(3), 5500); // splash removed
     })();
