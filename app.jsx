@@ -2113,9 +2113,9 @@ function QuestCreator({ onSave, onCancel, generateSteps, isGenerating, initialVa
     if (!input || aiBuilding) return;
     setAiBuilding(true);
     try {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
+      const response = await fetch("/api/claude", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-key": localStorage.getItem("rpg-api-key") || "", "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
           max_tokens: 1000,
@@ -2158,7 +2158,6 @@ Respond with ONLY valid JSON, no markdown or backticks:
       setAiPrompt("");
     } catch (err) {
       console.error("Smart build error:", err);
-      alert(err.message || "Quest build failed. Check your API key in Settings.");
     }
     setAiBuilding(false);
   };
@@ -2388,6 +2387,25 @@ function App() {
   const [reminders, setReminders] = useState([]);
   const [activeNudge, setActiveNudge] = useState(null);
   const [mounted, setMounted] = useState(false);
+
+
+  // Lock body scroll when any overlay is open (iOS PWA fix)
+  useEffect(() => {
+    const hasOverlay = activeNudge || showQuestCreator || skillDetail || itemDetail || statsExpanded || (splashPhase > 0 && splashPhase < 3);
+    if (hasOverlay) {
+      document.body.style.overflow = "hidden";
+      document.body.style.position = "fixed";
+      document.body.style.width = "100%";
+      document.body.style.top = `-${window.scrollY}px`;
+    } else {
+      const scrollY = document.body.style.top;
+      document.body.style.overflow = "";
+      document.body.style.position = "";
+      document.body.style.width = "";
+      document.body.style.top = "";
+      if (scrollY) window.scrollTo(0, parseInt(scrollY || "0") * -1);
+    }
+  }, [activeNudge, showQuestCreator, skillDetail, itemDetail, statsExpanded, splashPhase]);
 
   // Dim screen when header buttons fly in, then clear
   useEffect(() => {
@@ -2888,11 +2906,6 @@ function App() {
 
   const sendAiMessage = useCallback(async () => {
     if (!aiInput.trim() || aiLoading) return;
-    if (!localStorage.getItem("rpg-api-key")) {
-      setAiMessages(prev => [...prev, { role: "user", text: aiInput.trim() }, { role: "assistant", text: "I need an API key to awaken, Adventurer. Open Settings (hamburger menu, top-left) and enter your Anthropic API key under Navi Connection." }]);
-      setAiInput("");
-      return;
-    }
     const userMsg = aiInput.trim();
     setAiInput("");
     const newMsgs = [...aiMessages, { role: "user", text: userMsg }];
@@ -3013,9 +3026,9 @@ You MUST respond with valid JSON only. No markdown, no backticks. Format:
 
 If no actions needed, return empty actions array. Keep message brief and in-character. Be direct and helpful.`;
 
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
+      const response = await fetch("/api/claude", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-key": localStorage.getItem("rpg-api-key") || "", "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
           max_tokens: 1000,
@@ -3043,12 +3056,12 @@ If no actions needed, return empty actions array. Keep message brief and in-char
       try {
         parsed = JSON.parse(rawText.replace(/```json|```/g, "").trim());
       } catch (e) {
-        parsed = { message: rawText || "No response received.", actions: [] };
+        parsed = { message: rawText, actions: [] };
       }
 
       // Execute actions
       const feedback = executeAiActions(parsed.actions || []);
-      let aiReply = parsed.message || "No response received.";
+      let aiReply = parsed.message || "Done.";
       if (feedback && feedback.length > 0) {
         aiReply += "\n\n" + feedback.join("\n");
       }
@@ -3126,8 +3139,8 @@ If no actions needed, return empty actions array. Keep message brief and in-char
           const yCats = Object.keys(yLog).map(id => { const c = chals.find(x => x.id === id); return c ? c.category : null; }).filter(Boolean);
           const focusCat = yCats.length > 0 ? yCats[Math.floor(Math.random() * yCats.length)] : "mind";
           const catLabel = SKILL_CATEGORIES_DATA[focusCat]?.label || "Growth";
-          const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
-            method: "POST", headers: { "Content-Type": "application/json", "x-api-key": localStorage.getItem("rpg-api-key") || "", "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+          const aiRes = await fetch("/api/claude", {
+            method: "POST", headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 200,
               messages: [{ role: "user", content: "Generate one motivational quote for a dark fantasy RPG life app. Theme: " + catLabel + ". User is an entrepreneur-creator focused on sovereignty, execution, family legacy. Respond ONLY with JSON no backticks: " + JSON.stringify({quote:"under 15 words",category:catLabel,rarity:"common|rare|epic|legendary"}) }],
             }),
@@ -3299,9 +3312,9 @@ If no actions needed, return empty actions array. Keep message brief and in-char
   const generateStepsForQuest = useCallback(async (questName, questDesc) => {
     setGeneratingSteps(true);
     try {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
+      const response = await fetch("/api/claude", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-key": localStorage.getItem("rpg-api-key") || "", "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
           max_tokens: 1000,
@@ -3396,7 +3409,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
       background: "radial-gradient(ellipse at 50% 0%, #1a150e 0%, #0d0a07 50%, #050403 100%)",
       color: "#e8d5b5", fontFamily: "'Crimson Text', serif",
       position: "relative", overflow: "hidden",
-      filter: brightness !== 1 ? `brightness(${brightness})` : undefined,
+      overscrollBehavior: "none", WebkitOverflowScrolling: "touch",
     }}>
       <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@400;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Fira+Code:wght@400&display=swap" rel="stylesheet" />
 
@@ -3590,17 +3603,6 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
           opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(-20px)",
           transition: "all 0.8s cubic-bezier(0.4, 0, 0.2, 1)",
         }}>
-          {/* Settings hamburger button */}
-          <div onClick={() => setShowSettings(true)} style={{
-            position: 'absolute', top: '50%', left: '16px', transform: 'translateY(-50%)',
-            width: '36px', height: '36px', display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center', gap: '4px', cursor: 'pointer',
-            opacity: 0.7, transition: 'opacity 0.2s',
-          }}>
-            <div style={{ width: '18px', height: '2px', background: '#8a7a65', borderRadius: '1px' }} />
-            <div style={{ width: '18px', height: '2px', background: '#8a7a65', borderRadius: '1px' }} />
-            <div style={{ width: '18px', height: '2px', background: '#8a7a65', borderRadius: '1px' }} />
-          </div>
           <div style={{
             fontSize: "8px", color: "#8a7a65", letterSpacing: "4px", fontFamily: "'Cinzel', serif",
             textTransform: "uppercase", marginBottom: "2px",
@@ -5306,7 +5308,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
 
 {/* Footer */}
         <div style={{
-          textAlign: "center", padding: "16px 0 100px", fontSize: "9px",
+          textAlign: "center", padding: "16px 0 calc(100px + env(safe-area-inset-bottom, 0px))", fontSize: "9px",
           color: "#3d352a", fontFamily: "'Cinzel', serif", letterSpacing: "2px",
         }}>
           JEFFERSON WOLFE · LIFE RPG · v1.0
@@ -5784,7 +5786,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
       {activeNudge && (
         <div style={{
           position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 1100,
-          display: "flex", alignItems: "center", justifyContent: "center", padding: "20px",
+          display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", overscrollBehavior: "contain",
         }} onClick={(e) => e.target === e.currentTarget && setActiveNudge(null)}>
           <div style={{
             background: "linear-gradient(180deg, #1a150e, #0d0a07)",
@@ -6580,7 +6582,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
 
 {/* Floating Dock Navigation */}
       <div style={{
-        position: "fixed", bottom: "calc(12px + env(safe-area-inset-bottom, 0px))", left: "50%", transform: "translateX(-50%)",
+        position: "fixed", bottom: "max(12px, env(safe-area-inset-bottom, 12px))", left: "50%", transform: "translateX(-50%)",
         zIndex: 100, display: "flex", gap: "2px", padding: "6px 10px",
         background: "rgba(13, 10, 7, 0.9)",
         backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
@@ -6644,6 +6646,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; touch-action: manipulation; -webkit-user-select: none; user-select: none; }
         *::-webkit-scrollbar { display: none; }
         * { -ms-overflow-style: none; scrollbar-width: none; }
+        html, body { overscroll-behavior: none; }
         button, [onClick] { touch-action: manipulation; }
         @keyframes headerCardFlyIn {
           0% { transform: translateY(-50%) translateX(80px); opacity: 0; }
