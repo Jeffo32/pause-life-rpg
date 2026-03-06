@@ -2077,6 +2077,26 @@ function QuestCreator({ onSave, onCancel, generateSteps, isGenerating, initialVa
 
   const removeStep = (idx) => setSteps(prev => prev.filter((_, i) => i !== idx));
 
+  const callClaude = async ({ model, max_tokens, messages, system }) => {
+    const key = localStorage.getItem("rpg-api-key") || "";
+    if (!key) throw new Error("No API key stored. Add your Anthropic API key in Settings.");
+    const body = { model, max_tokens, messages };
+    if (system) body.system = system;
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": key,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true",
+      },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message || data.error.type || "Unknown API error");
+    return data;
+  };
+
   const testApiConnection = useCallback(async () => {
     setApiTesting(true);
     setApiTestResult(null);
@@ -2113,10 +2133,7 @@ function QuestCreator({ onSave, onCancel, generateSteps, isGenerating, initialVa
     if (!input || aiBuilding) return;
     setAiBuilding(true);
     try {
-      const response = await fetch("/api/claude", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const data = await callClaude({
           model: "claude-sonnet-4-20250514",
           max_tokens: 1000,
           messages: [{
@@ -2140,10 +2157,7 @@ Respond with ONLY valid JSON, no markdown or backticks:
   "estimatedXp": number between 50-500 based on scope
 }`
           }],
-        }),
       });
-      const data = await response.json();
-      if (data.error) throw new Error(formatApiError(data.error.message || data.error.type || "Unknown API error"));
       const rawText = data.content?.map(c => c.text || "").join("") || "";
       const parsed = JSON.parse(rawText.replace(/```json|```/g, "").trim());
 
@@ -3026,28 +3040,14 @@ You MUST respond with valid JSON only. No markdown, no backticks. Format:
 
 If no actions needed, return empty actions array. Keep message brief and in-character. Be direct and helpful.`;
 
-      const response = await fetch("/api/claude", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const data = await callClaude({
           model: "claude-sonnet-4-20250514",
           max_tokens: 1000,
           system: systemPrompt,
           messages: [
             ...newMsgs.slice(-10).map(m => ({ role: m.role === "user" ? "user" : "assistant", content: m.text })),
           ],
-        }),
       });
-
-      const data = await response.json();
-
-      // Check for API errors
-      if (data.error) {
-        const errMsg = data.error.message || data.error.type || "Unknown API error";
-        setAiMessages(prev => [...prev, { role: "assistant", text: formatApiError(errMsg) }]);
-        setAiLoading(false);
-        return;
-      }
 
       const rawText = data.content?.map(c => c.text || "").join("") || "";
 
@@ -3068,7 +3068,7 @@ If no actions needed, return empty actions array. Keep message brief and in-char
 
       setAiMessages(prev => [...prev, { role: "assistant", text: aiReply }]);
     } catch (err) {
-      setAiMessages(prev => [...prev, { role: "assistant", text: "Connection failed. Try again." }]);
+      setAiMessages(prev => [...prev, { role: "assistant", text: formatApiError(err.message || "Connection failed. Try again.") }]);
       console.error("AI error:", err);
     }
     setAiLoading(false);
@@ -3139,13 +3139,9 @@ If no actions needed, return empty actions array. Keep message brief and in-char
           const yCats = Object.keys(yLog).map(id => { const c = chals.find(x => x.id === id); return c ? c.category : null; }).filter(Boolean);
           const focusCat = yCats.length > 0 ? yCats[Math.floor(Math.random() * yCats.length)] : "mind";
           const catLabel = SKILL_CATEGORIES_DATA[focusCat]?.label || "Growth";
-          const aiRes = await fetch("/api/claude", {
-            method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 200,
+          const d = await callClaude({ model: "claude-sonnet-4-20250514", max_tokens: 200,
               messages: [{ role: "user", content: "Generate one motivational quote for a dark fantasy RPG life app. Theme: " + catLabel + ". User is an entrepreneur-creator focused on sovereignty, execution, family legacy. Respond ONLY with JSON no backticks: " + JSON.stringify({quote:"under 15 words",category:catLabel,rarity:"common|rare|epic|legendary"}) }],
-            }),
           });
-          const d = await aiRes.json();
           const t = d.content?.[0]?.text || "";
           const p = JSON.parse(t.replace(/```json|```/g, "").trim());
           if (p.quote) aiCard = { id: "ai_" + Date.now(), ...p, aiGenerated: true };
@@ -3312,10 +3308,7 @@ If no actions needed, return empty actions array. Keep message brief and in-char
   const generateStepsForQuest = useCallback(async (questName, questDesc) => {
     setGeneratingSteps(true);
     try {
-      const response = await fetch("/api/claude", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const data = await callClaude({
           model: "claude-sonnet-4-20250514",
           max_tokens: 1000,
           messages: [{
@@ -3327,10 +3320,7 @@ Description: ${questDesc || "No description provided"}
 
 Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "Step 2 text"]`
           }],
-        }),
       });
-      const data = await response.json();
-      if (data.error) throw new Error(formatApiError(data.error.message || data.error.type || "Unknown API error"));
       const text = data.content?.map(i => i.text || "").join("") || "[]";
       const clean = text.replace(/```json|```/g, "").trim();
       const steps = JSON.parse(clean);
