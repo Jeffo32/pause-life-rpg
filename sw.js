@@ -1,4 +1,4 @@
-const CACHE_NAME = 'life-rpg-v2';
+const CACHE_NAME = 'life-rpg-v3';
 const ASSETS = ['/', '/index.html', '/app.jsx'];
 
 self.addEventListener('install', (e) => {
@@ -15,18 +15,19 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  // Network first for API calls, cache first for assets
   if (e.request.url.includes('api.anthropic.com')) {
     e.respondWith(fetch(e.request).catch(() => new Response('{"error":"offline"}', { headers: { 'Content-Type': 'application/json' }})));
-  } else {
-    e.respondWith(
-      caches.match(e.request).then(r => r || fetch(e.request).then(res => {
-        if (res.status === 200) {
-          const clone = res.clone();
-          caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
-        }
-        return res;
-      }))
-    );
+    return;
   }
+
+  // Network-first: always try to get the latest, fall back to cache for offline
+  e.respondWith(
+    fetch(e.request).then(res => {
+      if (res.status === 200) {
+        const clone = res.clone();
+        caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
+      }
+      return res;
+    }).catch(() => caches.match(e.request))
+  );
 });
