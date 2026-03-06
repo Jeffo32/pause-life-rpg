@@ -2112,6 +2112,7 @@ Respond with ONLY valid JSON, no markdown or backticks:
         }),
       });
       const data = await response.json();
+      if (data.error) throw new Error(data.error.message || "API error — check your API key in Settings");
       const rawText = data.content?.map(c => c.text || "").join("") || "";
       const parsed = JSON.parse(rawText.replace(/```json|```/g, "").trim());
 
@@ -2126,6 +2127,7 @@ Respond with ONLY valid JSON, no markdown or backticks:
       setAiPrompt("");
     } catch (err) {
       console.error("Smart build error:", err);
+      alert(err.message || "Quest build failed. Check your API key in Settings.");
     }
     setAiBuilding(false);
   };
@@ -2992,6 +2994,15 @@ If no actions needed, return empty actions array. Keep message brief and in-char
       });
 
       const data = await response.json();
+
+      // Check for API errors
+      if (data.error) {
+        const errMsg = data.error.message || data.error.type || "Unknown API error";
+        setAiMessages(prev => [...prev, { role: "assistant", text: `API error: ${errMsg}. Check your API key in Settings.` }]);
+        setAiLoading(false);
+        return;
+      }
+
       const rawText = data.content?.map(c => c.text || "").join("") || "";
 
       // Parse JSON response
@@ -2999,12 +3010,12 @@ If no actions needed, return empty actions array. Keep message brief and in-char
       try {
         parsed = JSON.parse(rawText.replace(/```json|```/g, "").trim());
       } catch (e) {
-        parsed = { message: rawText, actions: [] };
+        parsed = { message: rawText || "No response received.", actions: [] };
       }
 
       // Execute actions
       const feedback = executeAiActions(parsed.actions || []);
-      let aiReply = parsed.message || "Done.";
+      let aiReply = parsed.message || "No response received.";
       if (feedback && feedback.length > 0) {
         aiReply += "\n\n" + feedback.join("\n");
       }
@@ -3273,6 +3284,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
         }),
       });
       const data = await response.json();
+      if (data.error) throw new Error(data.error.message || "API error");
       const text = data.content?.map(i => i.text || "").join("") || "[]";
       const clean = text.replace(/```json|```/g, "").trim();
       const steps = JSON.parse(clean);
