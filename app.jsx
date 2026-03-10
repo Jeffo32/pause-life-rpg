@@ -3616,30 +3616,14 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
             width: "140px", height: "1px", margin: "4px auto",
             background: "linear-gradient(90deg, transparent, rgba(245,158,11,0.4), transparent)",
           }} />
-          {/* Daily Card Button - purple, flies in after 2s */}
-          {dailyCard && !dailyFlipped && (
-            <div onClick={() => { setShowCardOverlay(true); setHeaderDimmed(false); }} style={{
-              position: 'absolute', top: '50%', right: '20px',
-              width: '36px', height: '36px', borderRadius: '10px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer',
-              animation: 'headerCardFlyIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) 2.4s both, headerCardGlow 2s ease-in-out 3.2s infinite',
-            }}>
-              <CardIcon size={18} color="#a855f7" />
-            </div>
-          )}
-          {/* Daily XP Button - green diamond, flies in after 3s */}
-          {pendingDailyXp && (
-            <div onClick={() => { claimDailyXp(); setHeaderDimmed(false); }} style={{
-              position: 'absolute', top: '50%', right: '52px',
-              width: '36px', height: '36px', borderRadius: '10px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer',
-              animation: 'headerXpFlyIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) 2s both, headerXpGlow 2s ease-in-out 2.8s infinite',
-            }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="#10b981" stroke="none"><path d="M12 2l10 10-10 10L2 12z"/></svg>
-            </div>
-          )}
+          {/* Date display - top right */}
+          <div style={{
+            position: 'absolute', top: '50%', right: '16px', transform: 'translateY(-50%)',
+            fontSize: '10px', color: '#8a7a65', fontFamily: "'Cinzel', serif",
+            letterSpacing: '1px', textAlign: 'right',
+          }}>
+            {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+          </div>
         </div>
 
         {/* Spacer for fixed header */}
@@ -3676,7 +3660,30 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
                       margin: 0, fontSize: "17px", fontFamily: "'Cinzel Decorative', serif",
                       color: "#f5c842", textShadow: "0 0 15px rgba(245,158,11,0.2)",
                     }}>{character.name}</h2>
-                    
+                    <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "6px" }}>
+                      {/* Daily XP Button - green diamond */}
+                      {pendingDailyXp && (
+                        <div onClick={() => { claimDailyXp(); setHeaderDimmed(false); }} style={{
+                          width: '32px', height: '32px', borderRadius: '8px',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          cursor: 'pointer',
+                          animation: 'headerXpGlow 2s ease-in-out infinite',
+                        }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="#10b981" stroke="none"><path d="M12 2l10 10-10 10L2 12z"/></svg>
+                        </div>
+                      )}
+                      {/* Daily Card Button - purple */}
+                      {dailyCard && !dailyFlipped && (
+                        <div onClick={() => { setShowCardOverlay(true); setHeaderDimmed(false); }} style={{
+                          width: '32px', height: '32px', borderRadius: '8px',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          cursor: 'pointer',
+                          animation: 'headerCardGlow 2s ease-in-out infinite',
+                        }}>
+                          <CardIcon size={16} color="#a855f7" />
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div style={{ fontSize: "12px", color: "#c4a882", fontFamily: "'Cinzel', serif", letterSpacing: "1px", marginTop: "2px" }}>
                     {character.title}
