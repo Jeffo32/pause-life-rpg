@@ -3603,6 +3603,19 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
           opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(-20px)",
           transition: "all 0.8s cubic-bezier(0.4, 0, 0.2, 1)",
         }}>
+          {/* Hamburger Menu Button - top left */}
+          <div onClick={() => setShowSettings(true)} style={{
+            position: 'absolute', top: '50%', left: '16px', transform: 'translateY(-50%)',
+            width: '36px', height: '36px', borderRadius: '10px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer',
+          }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8a7a65" strokeWidth="2" strokeLinecap="round">
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </div>
           <div style={{
             fontSize: "8px", color: "#8a7a65", letterSpacing: "4px", fontFamily: "'Cinzel', serif",
             textTransform: "uppercase", marginBottom: "2px",
