@@ -1153,39 +1153,39 @@ function Particles() {
 }
 
 
-// ─── DATA EXPORT / IMPORT ───────────────────────────────────────────────────
-async function exportAllData() {
-  const keys = ["rpg-character","rpg-skills","rpg-quests","rpg-inventory","rpg-equipment","rpg-assets",
-    "rpg-collected-cards","rpg-last-card-date","rpg-journal","rpg-last-daily-xp","rpg-challenges",
-    "rpg-challenge-log","rpg-reminders","rpg-today-card"];
+// ─── DATA SAVE / LOAD (in-app snapshots) ────────────────────────────────────
+const BACKUP_KEYS = ["rpg-character","rpg-skills","rpg-quests","rpg-inventory","rpg-equipment","rpg-assets",
+  "rpg-collected-cards","rpg-last-card-date","rpg-journal","rpg-last-daily-xp","rpg-challenges",
+  "rpg-challenge-log","rpg-reminders","rpg-today-card"];
+
+function saveBackup() {
   const data = {};
-  for (const key of keys) {
+  for (const key of BACKUP_KEYS) {
     try { const val = localStorage.getItem(key); if (val) data[key] = JSON.parse(val); } catch {}
   }
-  data._exportDate = new Date().toISOString();
+  data._saveDate = new Date().toISOString();
   data._version = "1.0";
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = `life-rpg-backup-${new Date().toISOString().slice(0,10)}.json`;
-  a.click(); URL.revokeObjectURL(url);
+  localStorage.setItem("rpg-backup", JSON.stringify(data));
+  return data._saveDate;
 }
 
-async function importAllData(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const data = JSON.parse(e.target.result);
-        let count = 0;
-        for (const [key, val] of Object.entries(data)) {
-          if (key.startsWith("rpg-")) { localStorage.setItem(key, JSON.stringify(val)); count++; }
-        }
-        resolve(count);
-      } catch (err) { reject(err); }
-    };
-    reader.readAsText(file);
-  });
+function loadBackup() {
+  const raw = localStorage.getItem("rpg-backup");
+  if (!raw) return null;
+  const data = JSON.parse(raw);
+  let count = 0;
+  for (const [key, val] of Object.entries(data)) {
+    if (key.startsWith("rpg-")) { localStorage.setItem(key, JSON.stringify(val)); count++; }
+  }
+  return { count, date: data._saveDate };
+}
+
+function getBackupDate() {
+  try {
+    const raw = localStorage.getItem("rpg-backup");
+    if (!raw) return null;
+    return JSON.parse(raw)._saveDate || null;
+  } catch { return null; }
 }
 
 // ─── STAT BAR COMPONENT ──────────────────────────────────────────────────────
@@ -2458,7 +2458,6 @@ function App() {
     return saved ? parseFloat(saved) : 1;
   });
   const [appTheme, setAppTheme] = useState(() => localStorage.getItem("rpg-theme") || "dark-fantasy");
-  const importBackupRef = useRef(null);
 
   // Persist brightness
   useEffect(() => {
@@ -3459,27 +3458,27 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
             <div style={{ marginBottom: '20px' }}>
               <div style={{ fontSize: '11px', color: '#8a7a65', letterSpacing: '2px', fontFamily: "'Cinzel', serif", marginBottom: '10px', textTransform: 'uppercase' }}>Data Backup</div>
               <div style={{ display: 'flex', gap: '10px' }}>
-                <button onClick={() => { exportAllData(); }} style={{
+                <button onClick={() => { saveBackup(); alert('Backup saved!'); }} style={{
                   flex: 1, padding: '10px', background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)',
                   borderRadius: '10px', color: '#4ade80', fontFamily: "'Cinzel', serif", fontSize: '13px',
                   cursor: 'pointer', letterSpacing: '1px',
                 }}>SAVE</button>
-                <button onClick={() => importBackupRef.current?.click()} style={{
+                <button onClick={() => {
+                  const result = loadBackup();
+                  if (!result) { alert('No backup found.'); return; }
+                  alert(`Restored ${result.count} data keys. Reloading...`);
+                  window.location.reload();
+                }} style={{
                   flex: 1, padding: '10px', background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)',
                   borderRadius: '10px', color: '#60a5fa', fontFamily: "'Cinzel', serif", fontSize: '13px',
                   cursor: 'pointer', letterSpacing: '1px',
                 }}>LOAD</button>
-                <input ref={importBackupRef} type="file" accept=".json" style={{ display: 'none' }} onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  try {
-                    const count = await importAllData(file);
-                    alert(`Restored ${count} data keys. Reloading...`);
-                    window.location.reload();
-                  } catch (err) { alert("Import failed: " + err.message); }
-                  e.target.value = "";
-                }} />
               </div>
+              {(() => { const d = getBackupDate(); return d ? (
+                <div style={{ fontSize: '9px', color: '#5a4f42', fontFamily: "'Fira Code', monospace", marginTop: '8px', textAlign: 'center' }}>
+                  Last backup: {new Date(d).toLocaleString()}
+                </div>
+              ) : null; })()}
             </div>
 
             {/* ── API Key ── */}
