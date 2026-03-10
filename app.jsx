@@ -5292,40 +5292,6 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
           </div>
         )}
 
-                {/* Settings / Backup */}
-        <Panel>
-          <div style={{ display: "flex", gap: "8px", justifyContent: "center", flexWrap: "wrap" }}>
-            <button onClick={() => exportAllData()} style={{
-              padding: "8px 16px", borderRadius: "8px", cursor: "pointer",
-              background: "rgba(0,0,0,0.3)", border: "1px solid rgba(245,158,11,0.15)",
-              color: "#8a7a65", fontFamily: "'Cinzel', serif", fontSize: "9px", letterSpacing: "1px",
-              display: "flex", alignItems: "center", gap: "6px",
-            }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              EXPORT BACKUP
-            </button>
-            <label style={{
-              padding: "8px 16px", borderRadius: "8px", cursor: "pointer",
-              background: "rgba(0,0,0,0.3)", border: "1px solid rgba(245,158,11,0.15)",
-              color: "#8a7a65", fontFamily: "'Cinzel', serif", fontSize: "9px", letterSpacing: "1px",
-              display: "flex", alignItems: "center", gap: "6px",
-            }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              IMPORT BACKUP
-              <input type="file" accept=".json" style={{ display: "none" }} onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                try {
-                  const count = await importAllData(file);
-                  alert("Restored " + count + " data keys. Reloading...");
-                  window.location.reload();
-                } catch (err) { alert("Import failed: " + err.message); }
-                e.target.value = "";
-              }} />
-            </label>
-          </div>
-        </Panel>
-
 {/* Footer */}
         <div style={{
           textAlign: "center", padding: "16px 0 calc(100px + env(safe-area-inset-bottom, 0px))", fontSize: "9px",
