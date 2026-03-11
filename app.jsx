@@ -2494,6 +2494,9 @@ function App() {
   const [undoState, setUndoState] = useState(null);
   const [showQuestCreator, setShowQuestCreator] = useState(false);
   const [journalEntries, setJournalEntries] = useState({});
+  const [journalStep, setJournalStep] = useState(0);
+  const [journalDraft, setJournalDraft] = useState({ amazing: "", learned: "", grateful: "" });
+  const [journalView, setJournalView] = useState("menu");
   const [dailyXpAwarded, setDailyXpAwarded] = useState(false);
   const [pendingDailyXp, setPendingDailyXp] = useState(null);
   const [xpSplash, setXpSplash] = useState(null);
@@ -3298,6 +3301,11 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
   }, []);
 
 
+  const saveJournal = useCallback(async (date, entry) => {
+    const updated = { ...journalEntries, [date]: entry };
+    setJournalEntries(updated);
+    await saveData("rpg-journal", updated);
+  }, [journalEntries]);
 
   const handleAvatarUpload = useCallback((e) => {
     const file = e.target.files?.[0];
@@ -3332,6 +3340,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
     { id: "character", label: "Hero", icon: <HelmetIcon size={18} color="currentColor" /> },
     { id: "challenges", label: "Daily", icon: <TargetIcon size={18} color="currentColor" /> },
     { id: "quests", label: "Quests", icon: <ScrollIcon size={18} color="currentColor" /> },
+    { id: "journal", label: "Journal", icon: <BookIcon size={18} color="currentColor" /> },
     { id: "skills", label: "Skills", icon: <LightningIcon size={18} color="currentColor" /> },
     { id: "inventory", label: "Items", icon: <BackpackIcon size={18} color="currentColor" /> },
   ];
@@ -4136,6 +4145,278 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
           </div>
         )}
 
+
+        {/* ═══ JOURNAL TAB ═══ */}
+        {activeTab === "journal" && (() => {
+          const today = new Date().toDateString();
+          const todayEntry = journalEntries[today];
+          const alreadySaved = !!todayEntry;
+          const PROMPTS = [
+            { key: "amazing", label: "What amazing things happened today?", icon: <SparkleIcon size={14} color="#f5c842" /> },
+            { key: "learned", label: "What did you learn?", icon: <BookIcon size={14} color="#f5c842" /> },
+            { key: "grateful", label: "What are you grateful for?", icon: <HeartIcon size={14} color="#f5c842" /> },
+          ];
+          const currentPrompt = PROMPTS[journalStep];
+          const allAnswered = journalDraft.amazing.trim() && journalDraft.learned.trim() && journalDraft.grateful.trim();
+          const allDates = Object.keys(journalEntries).sort((a, b) => new Date(b) - new Date(a));
+
+          return (
+            <div style={{ display: "grid", gap: "10px", opacity: mounted ? 1 : 0, transform: mounted ? "scale(1) translateY(0)" : "scale(0.95) translateY(15px)", transition: "opacity 0.5s 0.3s, transform 0.5s cubic-bezier(0.4, 0, 0.2, 1) 0.3s" }}>
+
+              {/* ─── MENU VIEW ─── */}
+              {journalView === "menu" && (
+                <Panel>
+                  <SectionHeader icon={<BookIcon />} title="Adventurer's Journal" subtitle="Record your journey" />
+
+                  {alreadySaved && (
+                    <div style={{
+                      padding: "8px 10px", marginBottom: "12px", borderRadius: "6px",
+                      background: "rgba(74,122,58,0.08)", border: "1px solid rgba(74,122,58,0.15)",
+                      fontSize: "11px", color: "#4a7a3a", fontFamily: "'Cinzel', serif",
+                      letterSpacing: "1px", textAlign: "center",
+                    }}>TODAY'S ENTRY RECORDED</div>
+                  )}
+
+                  {/* New Entry button */}
+                  <div
+                    onClick={() => {
+                      if (alreadySaved) {
+                        setJournalDraft({ ...todayEntry });
+                        setJournalStep(3);
+                      } else {
+                        setJournalDraft({ amazing: "", learned: "", grateful: "" });
+                        setJournalStep(0);
+                      }
+                      setJournalView("new");
+                    }}
+                    style={{
+                      padding: "16px", marginBottom: "8px", borderRadius: "8px", cursor: "pointer",
+                      background: "linear-gradient(145deg, rgba(245,158,11,0.08), rgba(245,158,11,0.02))",
+                      border: "1px solid rgba(245,158,11,0.2)",
+                      display: "flex", alignItems: "center", gap: "12px",
+                      transition: "border-color 0.2s",
+                    }}
+                  >
+                    <QuillIcon size={20} color="#f5c842" />
+                    <div>
+                      <div style={{ fontSize: "14px", color: "#f5c842", fontFamily: "'Cinzel', serif", letterSpacing: "1px" }}>
+                        {alreadySaved ? "View Today's Entry" : "New Entry"}
+                      </div>
+                      <div style={{ fontSize: "11px", color: "#8a7a65", marginTop: "2px" }}>
+                        {alreadySaved ? "Review or edit your journal" : "Answer today's three questions"}
+                      </div>
+                    </div>
+                    <ChevronIcon size={12} color="#5a4f40" open={false} />
+                  </div>
+
+                  {/* Previous Entries button */}
+                  <div
+                    onClick={() => setJournalView("history")}
+                    style={{
+                      padding: "16px", borderRadius: "8px", cursor: "pointer",
+                      background: "rgba(0,0,0,0.2)",
+                      border: "1px solid rgba(245,158,11,0.08)",
+                      display: "flex", alignItems: "center", gap: "12px",
+                      transition: "border-color 0.2s",
+                    }}
+                  >
+                    <BookIcon size={20} color="#8a7a65" />
+                    <div>
+                      <div style={{ fontSize: "14px", color: "#c4a882", fontFamily: "'Cinzel', serif", letterSpacing: "1px" }}>
+                        Previous Entries
+                      </div>
+                      <div style={{ fontSize: "11px", color: "#6b5d4a", marginTop: "2px" }}>
+                        {allDates.length} {allDates.length === 1 ? "entry" : "entries"} recorded
+                      </div>
+                    </div>
+                    <ChevronIcon size={12} color="#5a4f40" open={false} />
+                  </div>
+
+                  {dailyFlipped && dailyCard && (
+                    <div style={{ textAlign: "center", padding: "14px 8px", marginTop: "8px", borderTop: "1px solid rgba(245,158,11,0.08)" }}>
+                      <div style={{ fontSize: "15px", color: "#e8d5b5", fontFamily: "Crimson Text, serif", fontStyle: "italic", lineHeight: 1.6 }}>"{dailyCard.quote}"</div>
+                      <div style={{ fontSize: "9px", color: "#5a4f40", fontFamily: "Cinzel, serif", letterSpacing: "1.5px", marginTop: "10px", textTransform: "uppercase" }}>{dailyCard.category}</div>
+                    </div>
+                  )}
+                </Panel>
+              )}
+
+              {/* ─── NEW ENTRY VIEW ─── */}
+              {journalView === "new" && (
+                <Panel>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
+                    <div onClick={() => { setJournalView("menu"); setJournalStep(0); }}
+                      style={{ cursor: "pointer", padding: "4px", transform: "rotate(180deg)" }}>
+                      <ChevronIcon size={12} color="#8a7a65" open={false} />
+                    </div>
+                    <SectionHeader icon={<QuillIcon />} title={alreadySaved ? "Today's Entry" : "New Entry"} subtitle={today} />
+                  </div>
+
+                  {/* Progress dots */}
+                  <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginBottom: "16px" }}>
+                    {PROMPTS.map((p, i) => (
+                      <div key={i} style={{
+                        width: "8px", height: "8px", borderRadius: "50%",
+                        background: i < journalStep ? "#f59e0b" : i === journalStep && journalStep < 3 ? "rgba(245,158,11,0.5)" : "rgba(245,158,11,0.15)",
+                        border: i === journalStep && journalStep < 3 ? "1px solid #f59e0b" : "1px solid transparent",
+                        transition: "all 0.3s",
+                      }} />
+                    ))}
+                  </div>
+
+                  {journalStep < 3 ? (
+                    <div key={journalStep} style={{ animation: "fadeSlideDown 0.3s ease" }}>
+                      {/* Question */}
+                      <div style={{
+                        display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px",
+                        justifyContent: "center",
+                      }}>
+                        {currentPrompt.icon}
+                        <span style={{
+                          fontSize: "13px", color: "#f5c842", fontFamily: "'Cinzel', serif",
+                          letterSpacing: "1px", textAlign: "center",
+                        }}>{currentPrompt.label}</span>
+                        <button onClick={() => speak(currentPrompt.label)} style={{
+                          background: "none", border: "1px solid rgba(245,158,11,0.15)", borderRadius: "4px",
+                          padding: "3px 6px", cursor: "pointer", display: "flex", alignItems: "center",
+                        }}><SpeakerIcon size={11} color="#8a7a65" /></button>
+                      </div>
+
+                      {/* Answer textarea */}
+                      <textarea
+                        value={journalDraft[currentPrompt.key] || ""}
+                        onChange={e => setJournalDraft(prev => ({ ...prev, [currentPrompt.key]: e.target.value }))}
+                        placeholder="Write your answer..."
+                        autoFocus
+                        style={{
+                          width: "100%", background: "rgba(0,0,0,0.4)", border: "1px solid rgba(245,158,11,0.2)",
+                          borderRadius: "6px", color: "#e8d5b5", padding: "12px", fontSize: "16px",
+                          fontFamily: "'Crimson Text', serif", resize: "vertical", minHeight: "80px",
+                          outline: "none", boxSizing: "border-box",
+                        }}
+                      />
+
+                      {/* Navigation */}
+                      <div style={{ display: "flex", gap: "8px", marginTop: "12px" }}>
+                        {journalStep > 0 && (
+                          <button onClick={() => setJournalStep(s => s - 1)} style={{
+                            padding: "8px 16px", background: "rgba(0,0,0,0.3)",
+                            border: "1px solid rgba(255,255,255,0.1)", borderRadius: "6px", color: "#8a7a65",
+                            fontFamily: "'Cinzel', serif", fontSize: "11px", cursor: "pointer", letterSpacing: "1px",
+                          }}>BACK</button>
+                        )}
+                        <button onClick={() => {
+                          if (journalDraft[currentPrompt.key]?.trim()) setJournalStep(s => s + 1);
+                        }} style={{
+                          flex: 1, padding: "10px", borderRadius: "6px", cursor: "pointer",
+                          fontFamily: "'Cinzel', serif", fontSize: "11px", letterSpacing: "1px",
+                          background: journalDraft[currentPrompt.key]?.trim()
+                            ? "linear-gradient(145deg, rgba(245,158,11,0.3), rgba(245,158,11,0.1))"
+                            : "rgba(0,0,0,0.2)",
+                          border: journalDraft[currentPrompt.key]?.trim()
+                            ? "1px solid rgba(245,158,11,0.4)"
+                            : "1px solid rgba(255,255,255,0.05)",
+                          color: journalDraft[currentPrompt.key]?.trim() ? "#f5c842" : "#5a4f40",
+                        }}>
+                          {journalStep < 2 ? "NEXT" : "REVIEW"}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Review & Save */
+                    <div style={{ animation: "fadeSlideDown 0.3s ease" }}>
+                      <div style={{
+                        fontSize: "10px", color: "#8a7a65", fontFamily: "'Cinzel', serif",
+                        letterSpacing: "2px", textTransform: "uppercase", textAlign: "center", marginBottom: "12px",
+                      }}>{alreadySaved ? "YOUR ENTRY" : "REVIEW YOUR ENTRY"}</div>
+                      {PROMPTS.map((p, i) => (
+                        <div key={p.key} style={{
+                          marginBottom: "10px", padding: "8px",
+                          background: "rgba(0,0,0,0.2)", borderRadius: "6px",
+                          cursor: "pointer", border: "1px solid rgba(245,158,11,0.06)",
+                        }} onClick={() => setJournalStep(i)}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "3px" }}>
+                            {p.icon}
+                            <span style={{ fontSize: "9px", color: "#8a7a65", fontFamily: "'Cinzel', serif", letterSpacing: "1px" }}>
+                              {p.label}
+                            </span>
+                          </div>
+                          <div style={{
+                            fontSize: "12px", color: "#c4a882", paddingLeft: "20px",
+                            fontStyle: "italic", lineHeight: 1.4,
+                          }}>{journalDraft[p.key]}</div>
+                        </div>
+                      ))}
+                      <div style={{ display: "flex", gap: "8px", marginTop: "14px" }}>
+                        <button onClick={() => setJournalStep(2)} style={{
+                          padding: "8px 16px", background: "rgba(0,0,0,0.3)",
+                          border: "1px solid rgba(255,255,255,0.1)", borderRadius: "6px", color: "#8a7a65",
+                          fontFamily: "'Cinzel', serif", fontSize: "11px", cursor: "pointer", letterSpacing: "1px",
+                        }}>BACK</button>
+                        {allAnswered && (
+                          <button onClick={async () => {
+                            await saveJournal(today, { ...journalDraft });
+                            setJournalStep(0);
+                            setJournalDraft({ amazing: "", learned: "", grateful: "" });
+                            setJournalView("menu");
+                          }} style={{
+                            flex: 1, padding: "10px",
+                            background: "linear-gradient(145deg, rgba(245,158,11,0.3), rgba(245,158,11,0.1))",
+                            border: "1px solid rgba(245,158,11,0.4)", borderRadius: "6px", color: "#f5c842",
+                            fontFamily: "'Cinzel', serif", fontSize: "12px", cursor: "pointer", letterSpacing: "1px",
+                          }}>SAVE ENTRY</button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </Panel>
+              )}
+
+              {/* ─── HISTORY VIEW ─── */}
+              {journalView === "history" && (
+                <Panel>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
+                    <div onClick={() => setJournalView("menu")}
+                      style={{ cursor: "pointer", padding: "4px", transform: "rotate(180deg)" }}>
+                      <ChevronIcon size={12} color="#8a7a65" open={false} />
+                    </div>
+                    <SectionHeader icon={<BookIcon />} title="Previous Entries" subtitle={`${allDates.length} entries`} />
+                  </div>
+
+                  {allDates.length === 0 ? (
+                    <div style={{
+                      textAlign: "center", padding: "30px 10px", color: "#5a4f40",
+                      fontStyle: "italic", fontSize: "13px",
+                    }}>No entries yet. Start writing today.</div>
+                  ) : (
+                    allDates.map(date => {
+                      const entry = journalEntries[date];
+                      return (
+                        <div key={date} style={{
+                          padding: "10px 0", borderBottom: "1px solid rgba(245,158,11,0.06)",
+                        }}>
+                          <div style={{
+                            fontSize: "10px", color: "#f59e0b", fontFamily: "'Cinzel', serif",
+                            letterSpacing: "1px", marginBottom: "6px",
+                          }}>{date}</div>
+                          {entry.amazing && <div style={{ fontSize: "12px", color: "#c4a882", marginBottom: "4px", lineHeight: 1.4 }}>
+                            <SparkleIcon size={9} color="#8a7a65" /> {entry.amazing}
+                          </div>}
+                          {entry.learned && <div style={{ fontSize: "12px", color: "#c4a882", marginBottom: "4px", lineHeight: 1.4 }}>
+                            <BookIcon size={9} /> {entry.learned}
+                          </div>}
+                          {entry.grateful && <div style={{ fontSize: "12px", color: "#c4a882", lineHeight: 1.4 }}>
+                            <HeartIcon size={9} /> {entry.grateful}
+                          </div>}
+                        </div>
+                      );
+                    })
+                  )}
+                </Panel>
+              )}
+            </div>
+          );
+        })()}
 
         {/* ═══ SKILLS TAB ═══ */}
         {activeTab === "skills" && (() => {
