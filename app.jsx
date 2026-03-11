@@ -3536,7 +3536,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
         background: "radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.6) 100%)",
       }} />
 
-      <div style={{ position: "relative", zIndex: 2, maxWidth: "900px", margin: "0 auto", padding: "0 10px", paddingBottom: activeTab === "character" ? "0" : "80px", height: "100vh", overflowY: activeTab === "character" ? "hidden" : "auto", overflowX: "hidden" }}>
+      <div style={{ position: "relative", zIndex: 2, maxWidth: "900px", margin: "0 auto", padding: "0 10px", paddingBottom: activeTab === "character" ? (heroExpanded ? "80px" : "0") : "80px", height: "100vh", overflowY: (activeTab === "character" && !heroExpanded) ? "hidden" : "auto", overflowX: "hidden" }}>
 
         {/* Title Banner — Liquid Glass (fixed) */}
         <div style={{
@@ -6774,9 +6774,9 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
       `}</style>
     </div>
 
-    {/* ═══ SETTINGS PANEL — outside overflow:hidden container ═══ */}
-    {showSettings && (
-      <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', justifyContent: 'center', alignItems: 'center', fontFamily: "'Crimson Text', serif" }}>
+    {/* ═══ SETTINGS PANEL — rendered via portal to bypass all overflow/stacking issues ═══ */}
+    {showSettings && ReactDOM.createPortal(
+      <div style={{ position: 'fixed', inset: 0, zIndex: 9998, display: 'flex', justifyContent: 'center', alignItems: 'center', fontFamily: "'Crimson Text', serif" }}>
         {/* Backdrop */}
         <div onClick={() => setShowSettings(false)} style={{
           position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)',
@@ -6926,7 +6926,8 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
             <div style={{ fontSize: '10px', color: '#5a4a35', marginTop: '6px' }}>More themes coming soon</div>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body
     )}
     </>
   );
