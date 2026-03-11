@@ -876,6 +876,125 @@ const DEFAULT_QUESTS = [
     { text: "Create workshop booking flow with calendar integration", done: false },
     { text: "Deploy and connect to domain", done: false },
   ]},
+
+  // ── BELVU / OPS ──────────────────────────────────────────────────────────────
+  { id: "belvu-p1", name: "Belvu: Foundation & First Launches", type: "main", status: "active", description: "Get every Belvu process out of heads and onto paper — SOPs, Notion hub, VA handover", xpReward: null, steps: [
+    { text: "Map every process you touch at Belvu — walk each shift with a notepad", done: false },
+    { text: "Write SOPs #1-3: Opening Procedure, Social Media Posting, End of Night", done: false },
+    { text: "Hand social SOP to VA — have them run it solo for a full week", done: false },
+    { text: "Build Notion ops hub: Staff Contacts, Schedules, SOPs, Escalation contacts", done: false },
+    { text: "Write SOPs #4-6: Staff Scheduling, Inventory & Ordering, Staff Onboarding", done: false },
+    { text: "VA running social 100% solo — your review is 15 min on Sundays only", done: false },
+    { text: "Start exit timeline conversation with boss: 'I want everything to run without me'", done: false },
+  ]},
+  { id: "belvu-p2", name: "Belvu: Systems Lock-In", type: "main", status: "active", description: "Belvu runs on your SOPs — shift manager role replaceable, advisory conversation begins", xpReward: null, steps: [
+    { text: "Hand SOPs to senior staff — test if someone else can run a shift", done: false },
+    { text: "Complete shift manager handbook: pre-shift, during shift, end of shift, escalation", done: false },
+    { text: "Full Belvu ops hub review — fix anything staff are bypassing", done: false },
+    { text: "Have advisory conversation with boss: 'Here's my plan to step back'", done: false },
+    { text: "Train a replacement shift manager on real shifts using the handbook", done: false },
+    { text: "Propose advisory structure: retained fee, revenue share, or consulting day rate", done: false },
+    { text: "Reduce shifts from 3 nights to 1 or 0 — document any remaining head-only processes", done: false },
+  ]},
+  { id: "belvu-p3", name: "Belvu: Advisory Transition", type: "main", status: "active", description: "Operational involvement ends — you review, you don't run", xpReward: null, steps: [
+    { text: "Shift to oversight only — weekly 30-min check-in with shift manager", done: false },
+    { text: "Finalize Notion ops hub — no process lives only in someone's head", done: false },
+    { text: "Lock in advisory mode: 2 hours/week max, review and advise only", done: false },
+    { text: "Test full handover — go quiet for 2 weeks and see what breaks", done: false },
+    { text: "Fix any gaps from the handover test — that's your final operational work", done: false },
+    { text: "Move to monthly check-in only — review, advise, invoice", done: false },
+    { text: "Document your Belvu work as a case study: 'Systematised a 3-restaurant business in 9 months'", done: false },
+  ]},
+  { id: "belvu-p4", name: "Belvu: Exit & Asset", type: "main", status: "active", description: "Formally exit or lock advisory agreement — package the system as a sellable product", xpReward: null, steps: [
+    { text: "Final exit conversation — signed advisory agreement or clean handover", done: false },
+    { text: "Package SOP library + ops hub as a sellable 'hospitality ops starter kit'", done: false },
+    { text: "If still doing shifts — stop now. Advisory only, or nothing.", done: false },
+    { text: "Build hospitality ops kit as paid download ($49-$97) for Rostering app users", done: false },
+    { text: "Confirm: ongoing advisory fee or clean close — write the ending with intention", done: false },
+    { text: "Mark it: the system exists, it runs without you, your operational role ends here", done: false },
+    { text: "Protect the asset — never go back to the floor, that chapter is closed", done: false },
+  ]},
+
+  // ── TECH / BUILD ─────────────────────────────────────────────────────────────
+  { id: "tech-p1", name: "Tech: Ship Rostering & Content Gen", type: "main", status: "active", description: "Get both near-ready apps into paying users' hands — Life RPG builds in background", xpReward: null, steps: [
+    { text: "Rostering app: final QA pass on 3 devices, write one-paragraph description", done: false },
+    { text: "Set up Rostering landing page, pricing tier, and Stripe payments", done: false },
+    { text: "Launch Rostering publicly — get at least 2 beta users, open feedback loop", done: false },
+    { text: "Collect and act on Rostering feedback — fix only the top 2 issues", done: false },
+    { text: "Launch Content Generator — landing page, pricing, push to 2 creator communities", done: false },
+    { text: "Convert Rostering beta users to paid — personal outreach to every user", done: false },
+    { text: "Target first paying customer across either app — even $1 changes everything", done: false },
+  ]},
+  { id: "tech-p2", name: "Tech: Revenue Growth to $500 MRR", type: "main", status: "active", description: "Both apps with paying users — push toward $500 MRR, Life RPG takes shape", xpReward: null, steps: [
+    { text: "Rostering: grow to 5 paying users — outreach to 10 new operators, ask for referrals", done: false },
+    { text: "Content Generator: add paid tier, run limited 50%-off-forever offer for first 10 users", done: false },
+    { text: "Start tracking MRR across both apps — simple revenue dashboard", done: false },
+    { text: "Life RPG: core loop playable — XP, quests, basic skill tree working", done: false },
+    { text: "Midpoint audit: kill unused features, simplify both products", done: false },
+    { text: "Rostering: push to 10 paying users — Facebook groups, LinkedIn, direct DMs", done: false },
+    { text: "Life RPG: journal system and dark fantasy aesthetic pass complete", done: false },
+    { text: "Show Life RPG to 3 people for gut reaction — document what they wish it did", done: false },
+  ]},
+  { id: "tech-p3", name: "Tech: Scale to $1K MRR", type: "main", status: "active", description: "Identify the stronger app, double down — Mosaic hours freed = more build time", xpReward: null, steps: [
+    { text: "Identify stronger app (retention + growth) — allocate 70% build time to it", done: false },
+    { text: "Push toward $1k MRR — focused outreach: 20 DMs, 3 posts, 1 community post", done: false },
+    { text: "Hit or diagnose $1k MRR — is the blocker product, marketing, or pricing?", done: false },
+    { text: "Redirect freed Mosaic hours: 6hrs product, 3hrs marketing, 3hrs Life RPG", done: false },
+    { text: "Life RPG: quest system and XP economy working — playtest with 1 person", done: false },
+    { text: "Life RPG: soft launch to 10-20 early access users", done: false },
+    { text: "Set Life RPG public beta launch date for Q1 2026", done: false },
+    { text: "Evaluate: Rostering + Content Generator as hospitality bundle opportunity", done: false },
+  ]},
+  { id: "tech-p4", name: "Tech: Compound & Launch Life RPG", type: "main", status: "active", description: "Revenue compounds, Life RPG launches publicly — 3 products, growing distribution", xpReward: null, steps: [
+    { text: "December sprint: run holiday promotion for both apps", done: false },
+    { text: "Target $1.5k MRR — offer annual billing at 2 months free to convert MRR to ARR", done: false },
+    { text: "Life RPG: open waitlist, start collecting emails", done: false },
+    { text: "Life RPG: public beta launch — ship to waitlist and build-in-public audience", done: false },
+    { text: "Collect 20 pieces of Life RPG feedback, fix top 3 confusing/broken things", done: false },
+    { text: "Review all 3 products: which is the flagship for 2026?", done: false },
+    { text: "Target $2k+ MRR — annual plan conversions, new user campaigns, referral activations", done: false },
+    { text: "Plan the next 12 months of product — clear roadmap for 2026", done: false },
+  ]},
+
+  // ── SELF / MISSION ───────────────────────────────────────────────────────────
+  { id: "self-p1", name: "Mission: Define & Position", type: "main", status: "active", description: "Write the mission, pick a platform, start showing up publicly — seed the environmental idea", xpReward: null, steps: [
+    { text: "Write your mission statement — one paragraph, pin it where you see it daily", done: false },
+    { text: "Pick one platform to build in public (X, LinkedIn, or Instagram)", done: false },
+    { text: "First public post: what you're building and why", done: false },
+    { text: "Post your Rostering launch story and Content Generator dual-launch story", done: false },
+    { text: "Define positioning line: 'I build [what] for [who]' — add to social bio", done: false },
+    { text: "Research environmental cleanup products — 2 hours, write notes on what's missing", done: false },
+    { text: "Review Phase 1 progress: SOPs, launches, revenue, VA independence", done: false },
+    { text: "Health check: set a non-negotiable sleep floor (min 5.5 hrs)", done: false },
+  ]},
+  { id: "self-p2", name: "Mission: Build in Public", type: "main", status: "active", description: "Consistent content cadence — Mosaic exit date set, environmental idea gets a name", xpReward: null, steps: [
+    { text: "Commit to 2 posts/week: build log + one insight — document Belvu systemisation", done: false },
+    { text: "Reassess Mosaic timeline — set exit date, write down the MRR number that unlocks it", done: false },
+    { text: "Write honest 6-month review — publish publicly for authority and accountability", done: false },
+    { text: "Sketch environmental product idea: give it a name, one paragraph, create a folder", done: false },
+    { text: "Mosaic: set hard exit date — define what number unlocks it if not there yet", done: false },
+    { text: "Financial runway audit: calculate monthly burn, how far from exiting Mosaic", done: false },
+  ]},
+  { id: "self-p3", name: "Mission: Exit Mosaic & Activate Brand", type: "main", status: "active", description: "Give notice, redesign your week — Wolfe Productions becomes a real channel", xpReward: null, steps: [
+    { text: "Give Mosaic notice — 4 weeks, professional, clean, grateful", done: false },
+    { text: "Post the signal: 'I'm going full-time on my own products'", done: false },
+    { text: "Define Wolfe Productions: personal brand umbrella, production label, or both", done: false },
+    { text: "Give Wolfe Productions one active output: YouTube series, newsletter, or portfolio", done: false },
+    { text: "Environmental product: 3 hours deep research on one specific idea", done: false },
+    { text: "Last day at Mosaic — leave well, write a reflection post on what teaching taught you", done: false },
+    { text: "Redesign your week from scratch: deep build blocks, admin window, family time", done: false },
+    { text: "Brand audit: update every bio, profile, description to reflect who you are now", done: false },
+  ]},
+  { id: "self-p4", name: "Mission: Legacy Begins", type: "main", status: "active", description: "Year-in-review, environmental product first real move — write the next chapter", xpReward: null, steps: [
+    { text: "Write year-end reflection: where you were in March vs now — publish it", done: false },
+    { text: "Protect family time in December — set a hard work cutoff for Christmas week", done: false },
+    { text: "Set 2026 targets: MRR goal, ideal week structure, environmental product business concept", done: false },
+    { text: "Lock in content cadence: 2 posts/week minimum, non-negotiable", done: false },
+    { text: "Environmental product: first real step — talk to someone, sketch prototype, or register name", done: false },
+    { text: "Write your story: '12 months ago 3 jobs, no freedom — now 3 products, building the mission'", done: false },
+    { text: "Year one complete: review every domain — what did you build, exit, learn, earn?", done: false },
+    { text: "Write the next chapter's mission statement — this one's done", done: false },
+  ]},
 ];
 
 // Equipment slot definitions (around avatar)
@@ -1153,39 +1272,39 @@ function Particles() {
 }
 
 
-// ─── DATA EXPORT / IMPORT ───────────────────────────────────────────────────
-async function exportAllData() {
-  const keys = ["rpg-character","rpg-skills","rpg-quests","rpg-inventory","rpg-equipment","rpg-assets",
-    "rpg-collected-cards","rpg-last-card-date","rpg-journal","rpg-last-daily-xp","rpg-challenges",
-    "rpg-challenge-log","rpg-reminders","rpg-today-card"];
+// ─── DATA SAVE / LOAD (in-app snapshots) ────────────────────────────────────
+const BACKUP_KEYS = ["rpg-character","rpg-skills","rpg-quests","rpg-inventory","rpg-equipment","rpg-assets",
+  "rpg-collected-cards","rpg-last-card-date","rpg-journal","rpg-last-daily-xp","rpg-challenges",
+  "rpg-challenge-log","rpg-reminders","rpg-today-card"];
+
+function saveBackup() {
   const data = {};
-  for (const key of keys) {
+  for (const key of BACKUP_KEYS) {
     try { const val = localStorage.getItem(key); if (val) data[key] = JSON.parse(val); } catch {}
   }
-  data._exportDate = new Date().toISOString();
+  data._saveDate = new Date().toISOString();
   data._version = "1.0";
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = `life-rpg-backup-${new Date().toISOString().slice(0,10)}.json`;
-  a.click(); URL.revokeObjectURL(url);
+  localStorage.setItem("rpg-backup", JSON.stringify(data));
+  return data._saveDate;
 }
 
-async function importAllData(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const data = JSON.parse(e.target.result);
-        let count = 0;
-        for (const [key, val] of Object.entries(data)) {
-          if (key.startsWith("rpg-")) { localStorage.setItem(key, JSON.stringify(val)); count++; }
-        }
-        resolve(count);
-      } catch (err) { reject(err); }
-    };
-    reader.readAsText(file);
-  });
+function loadBackup() {
+  const raw = localStorage.getItem("rpg-backup");
+  if (!raw) return null;
+  const data = JSON.parse(raw);
+  let count = 0;
+  for (const [key, val] of Object.entries(data)) {
+    if (key.startsWith("rpg-")) { localStorage.setItem(key, JSON.stringify(val)); count++; }
+  }
+  return { count, date: data._saveDate };
+}
+
+function getBackupDate() {
+  try {
+    const raw = localStorage.getItem("rpg-backup");
+    if (!raw) return null;
+    return JSON.parse(raw)._saveDate || null;
+  } catch { return null; }
 }
 
 // ─── STAT BAR COMPONENT ──────────────────────────────────────────────────────
@@ -2458,7 +2577,6 @@ function App() {
     return saved ? parseFloat(saved) : 1;
   });
   const [appTheme, setAppTheme] = useState(() => localStorage.getItem("rpg-theme") || "dark-fantasy");
-  const importBackupRef = useRef(null);
 
   // Persist brightness
   useEffect(() => {
@@ -3459,27 +3577,27 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
             <div style={{ marginBottom: '20px' }}>
               <div style={{ fontSize: '11px', color: '#8a7a65', letterSpacing: '2px', fontFamily: "'Cinzel', serif", marginBottom: '10px', textTransform: 'uppercase' }}>Data Backup</div>
               <div style={{ display: 'flex', gap: '10px' }}>
-                <button onClick={() => { exportAllData(); }} style={{
+                <button onClick={() => { saveBackup(); alert('Backup saved!'); }} style={{
                   flex: 1, padding: '10px', background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)',
                   borderRadius: '10px', color: '#4ade80', fontFamily: "'Cinzel', serif", fontSize: '13px',
                   cursor: 'pointer', letterSpacing: '1px',
                 }}>SAVE</button>
-                <button onClick={() => importBackupRef.current?.click()} style={{
+                <button onClick={() => {
+                  const result = loadBackup();
+                  if (!result) { alert('No backup found.'); return; }
+                  alert(`Restored ${result.count} data keys. Reloading...`);
+                  window.location.reload();
+                }} style={{
                   flex: 1, padding: '10px', background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)',
                   borderRadius: '10px', color: '#60a5fa', fontFamily: "'Cinzel', serif", fontSize: '13px',
                   cursor: 'pointer', letterSpacing: '1px',
                 }}>LOAD</button>
-                <input ref={importBackupRef} type="file" accept=".json" style={{ display: 'none' }} onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  try {
-                    const count = await importAllData(file);
-                    alert(`Restored ${count} data keys. Reloading...`);
-                    window.location.reload();
-                  } catch (err) { alert("Import failed: " + err.message); }
-                  e.target.value = "";
-                }} />
               </div>
+              {(() => { const d = getBackupDate(); return d ? (
+                <div style={{ fontSize: '9px', color: '#5a4f42', fontFamily: "'Fira Code', monospace", marginTop: '8px', textAlign: 'center' }}>
+                  Last backup: {new Date(d).toLocaleString()}
+                </div>
+              ) : null; })()}
             </div>
 
             {/* ── API Key ── */}
@@ -3603,6 +3721,19 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
           opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(-20px)",
           transition: "all 0.8s cubic-bezier(0.4, 0, 0.2, 1)",
         }}>
+          {/* Hamburger Menu Button - top left */}
+          <div onClick={() => setShowSettings(true)} style={{
+            position: 'absolute', top: '50%', left: '16px', transform: 'translateY(-50%)',
+            width: '36px', height: '36px', borderRadius: '10px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer',
+          }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8a7a65" strokeWidth="2" strokeLinecap="round">
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </div>
           <div style={{
             fontSize: "8px", color: "#8a7a65", letterSpacing: "4px", fontFamily: "'Cinzel', serif",
             textTransform: "uppercase", marginBottom: "2px",
@@ -5278,40 +5409,6 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
 
           </div>
         )}
-
-                {/* Settings / Backup */}
-        <Panel>
-          <div style={{ display: "flex", gap: "8px", justifyContent: "center", flexWrap: "wrap" }}>
-            <button onClick={() => exportAllData()} style={{
-              padding: "8px 16px", borderRadius: "8px", cursor: "pointer",
-              background: "rgba(0,0,0,0.3)", border: "1px solid rgba(245,158,11,0.15)",
-              color: "#8a7a65", fontFamily: "'Cinzel', serif", fontSize: "9px", letterSpacing: "1px",
-              display: "flex", alignItems: "center", gap: "6px",
-            }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              EXPORT BACKUP
-            </button>
-            <label style={{
-              padding: "8px 16px", borderRadius: "8px", cursor: "pointer",
-              background: "rgba(0,0,0,0.3)", border: "1px solid rgba(245,158,11,0.15)",
-              color: "#8a7a65", fontFamily: "'Cinzel', serif", fontSize: "9px", letterSpacing: "1px",
-              display: "flex", alignItems: "center", gap: "6px",
-            }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              IMPORT BACKUP
-              <input type="file" accept=".json" style={{ display: "none" }} onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                try {
-                  const count = await importAllData(file);
-                  alert("Restored " + count + " data keys. Reloading...");
-                  window.location.reload();
-                } catch (err) { alert("Import failed: " + err.message); }
-                e.target.value = "";
-              }} />
-            </label>
-          </div>
-        </Panel>
 
 {/* Footer */}
         <div style={{
