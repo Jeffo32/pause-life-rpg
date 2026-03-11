@@ -3348,7 +3348,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
         </div>
 
         {/* Spacer for fixed header */}
-        <div style={{ height: "calc(70px + env(safe-area-inset-top, 0px))" }} />
+        <div style={{ height: "calc(80px + env(safe-area-inset-top, 0px))" }} />
 
         {/* ═══ CHARACTER TAB ═══ */}
         {activeTab === "character" && (
@@ -6149,11 +6149,11 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
           {/* ── Data Backup ── */}
           <div style={{ marginBottom: '20px' }}>
             <div style={{ fontSize: '11px', color: '#8a7a65', letterSpacing: '2px', fontFamily: "'Cinzel', serif", marginBottom: '10px', textTransform: 'uppercase' }}>Data Backup</div>
-            <div style={{ display: 'flex', gap: '10px' }}>
+            <div style={{ display: 'flex', flexDirection: 'row', gap: '10px', width: '100%' }}>
               <button onClick={() => { saveBackup(); alert('Backup saved!'); }} style={{
-                flex: 1, padding: '10px', background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)',
+                flex: '1 1 0%', padding: '10px', background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)',
                 borderRadius: '10px', color: '#4ade80', fontFamily: "'Cinzel', serif", fontSize: '13px',
-                cursor: 'pointer', letterSpacing: '1px',
+                cursor: 'pointer', letterSpacing: '1px', minWidth: 0,
               }}>SAVE</button>
               <button onClick={() => {
                 const result = loadBackup();
@@ -6161,9 +6161,9 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
                 alert(`Restored ${result.count} data keys. Reloading...`);
                 window.location.reload();
               }} style={{
-                flex: 1, padding: '10px', background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)',
+                flex: '1 1 0%', padding: '10px', background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)',
                 borderRadius: '10px', color: '#60a5fa', fontFamily: "'Cinzel', serif", fontSize: '13px',
-                cursor: 'pointer', letterSpacing: '1px',
+                cursor: 'pointer', letterSpacing: '1px', minWidth: 0,
               }}>LOAD</button>
             </div>
             {(() => { const d = getBackupDate(); return d ? (
