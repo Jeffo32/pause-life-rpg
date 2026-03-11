@@ -2756,7 +2756,21 @@ function App() {
   }, []);
 
   const NAVI_SOUNDS = [
+    "Sounds/OOT_Navi_Hello1.wav",
+    "Sounds/OOT_Navi_Hello2.wav",
+    "Sounds/OOT_Navi_Hello3.wav",
+    "Sounds/OOT_Navi_Hello4.wav",
+    "Sounds/OOT_Navi_Hello5.wav",
+    "Sounds/OOT_Navi_Hey1.wav",
+    "Sounds/OOT_Navi_Hey2.wav",
+    "Sounds/OOT_Navi_Hey3.wav",
+    "Sounds/OOT_Navi_Hey4.wav",
+    "Sounds/OOT_Navi_Hey5.wav",
+    "Sounds/OOT_Navi_Listen1.wav",
+    "Sounds/OOT_Navi_Listen2.wav",
     "Sounds/OOT_Navi_Listen3.wav",
+    "Sounds/OOT_Navi_Listen4.wav",
+    "Sounds/OOT_Navi_Listen5.wav",
   ];
 
   const playNaviSound = useCallback(() => {
@@ -2764,9 +2778,9 @@ function App() {
     playSound(sound);
   }, [playSound]);
 
-  const playMenuOpen = useCallback(() => playSound("Sounds/PauseMenu_Open.wav"), [playSound]);
-  const playMenuClose = useCallback(() => playSound("Sounds/PauseMenu_Close.wav"), [playSound]);
-  const playXpCollected = useCallback(() => playSound("Sounds/xp_collected.wav"), [playSound]);
+  const playMenuOpen = useCallback(() => playSound("Sounds/OOT_PauseMenu_Open.wav"), [playSound]);
+  const playMenuClose = useCallback(() => playSound("Sounds/OOT_PauseMenu_Close.wav"), [playSound]);
+  const playXpCollected = useCallback(() => playSound("Sounds/OOT_xp_collected.wav"), [playSound]);
 
   // ── Haptic Feedback ──
   const haptic = useCallback((duration = 10) => {
