@@ -819,62 +819,42 @@ const DEFAULT_SKILLS = [
 ];
 
 const DEFAULT_QUESTS = [
-  { id: "q1", name: "Hit $20K/month revenue", type: "main", status: "active", description: "Scale from $9-11K to $20K monthly income", xpReward: null, steps: [
-    { text: "Audit all current revenue streams and document exact monthly income per source", done: true },
-    { text: "Identify top 2 highest-leverage income channels to double down on", done: true },
-    { text: "Set pricing increases for undervalued services (workshops, production)", done: false },
-    { text: "Launch one new recurring revenue offer (retainer, subscription, or digital product)", done: false },
-    { text: "Eliminate or delegate any work generating less than $50/hr effective rate", done: false },
-    { text: "Build automated sales funnel for highest-margin service", done: false },
-    { text: "Hit $15K/month milestone and hold for 2 consecutive months", done: false },
-    { text: "Scale to $20K/month and document the system for repeatability", done: false },
+  // ── SIDE QUESTS ──────────────────────────────────────────────────────────────
+  { id: "sq1", name: "Photography: Milestones School", type: "side", status: "active", description: "Photography project for Milestones School", xpReward: null, steps: [
+    { text: "Confirm brief and shot list with the school", done: false },
+    { text: "Schedule and complete the shoot day", done: false },
+    { text: "Cull and edit selects", done: false },
+    { text: "Deliver final gallery and collect payment", done: false },
   ]},
-  { id: "q2", name: "Systemize Belvu Group", type: "main", status: "active", description: "Delegate operations, retain strategic oversight only", xpReward: null, steps: [
-    { text: "Document all recurring operational tasks across Mama Vu's, Nicks Thai, The Pit", done: true },
-    { text: "Create SOPs for opening/closing, inventory ordering, and staff onboarding", done: false },
-    { text: "Deploy roster management system with Square API integration", done: false },
-    { text: "Hire or promote a venue manager for day-to-day decision-making", done: false },
-    { text: "Set up weekly automated P&L reporting dashboard", done: false },
-    { text: "Reduce personal involvement to strategic check-ins only (2hrs/week max)", done: false },
+  { id: "sq2", name: "Video: Tim Heavy Machinery", type: "side", status: "active", description: "Video production project for Tim Heavy Machinery", xpReward: null, steps: [
+    { text: "Confirm brief, locations, and shoot schedule", done: false },
+    { text: "Complete filming day(s)", done: false },
+    { text: "Edit rough cut and send for review", done: false },
+    { text: "Deliver final cut and collect payment", done: false },
   ]},
-  { id: "q3", name: "Launch Life Card Factory", type: "main", status: "active", description: "Complete and deploy the automated Life Card generation platform", xpReward: null, steps: [
-    { text: "Finalize core card generation engine with all art style options", done: true },
-    { text: "Build card reveal animations and collection UI", done: true },
-    { text: "Implement user accounts and card persistence", done: true },
-    { text: "Add sharing/export functionality (social media, print-ready)", done: false },
-    { text: "Set up payment integration for premium card packs", done: false },
-    { text: "Deploy to production domain with analytics", done: false },
-    { text: "Create launch content and distribute across channels", done: false },
-  ]},
-  { id: "q4", name: "Clear debt obligations", type: "main", status: "active", description: "Pay off car loan, credit card, and overdraft", xpReward: null, steps: [
-    { text: "List all debts with exact balances, interest rates, and minimum payments", done: true },
-    { text: "Rank debts by interest rate (avalanche method) and set payoff order", done: false },
-    { text: "Allocate fixed weekly amount above minimums to highest-priority debt", done: false },
-    { text: "Clear credit card balance completely", done: false },
-    { text: "Clear overdraft", done: false },
-    { text: "Accelerate car loan payments with freed-up cashflow", done: false },
-  ]},
-  { id: "q5", name: "Build personal brand authority", type: "side", status: "active", description: "Establish self-improvement authority channel", xpReward: null, steps: [
-    { text: "Define content pillars: sovereignty, systems thinking, creative leverage", done: false },
-    { text: "Choose primary platform and commit to consistent posting schedule", done: false },
-    { text: "Produce and publish first 10 pieces of content (short-form or written)", done: false },
-    { text: "Build email list with lead magnet related to Life Cards or systems", done: false },
-    { text: "Hit 1,000 engaged followers on primary platform", done: false },
-  ]},
-  { id: "q6", name: "Deploy roster management system", type: "side", status: "active", description: "Complete Square API integration for Belvu staff scheduling", xpReward: null, steps: [
-    { text: "Finalize Square API OAuth flow and employee data sync", done: true },
-    { text: "Build shift creation and assignment UI", done: true },
-    { text: "Implement schedule publishing via Square Labor API", done: true },
-    { text: "Add conflict detection and availability management", done: false },
-    { text: "Deploy to Vercel with serverless CORS proxy", done: false },
-    { text: "User test with Belvu managers and iterate on feedback", done: false },
-  ]},
-  { id: "q7", name: "Wolfe Productions website rebuild", type: "side", status: "active", description: "Redesign and deploy updated portfolio site", xpReward: null, steps: [
-    { text: "Define site structure: services, portfolio, workshops, contact", done: true },
-    { text: "Design homepage with hero reel and clear value proposition", done: true },
-    { text: "Build portfolio gallery with underwater photography + production work", done: false },
-    { text: "Create workshop booking flow with calendar integration", done: false },
+  { id: "sq3", name: "Website: The Green Shed", type: "side", status: "active", description: "Website build for The Green Shed", xpReward: null, steps: [
+    { text: "Gather content, branding, and requirements from client", done: false },
+    { text: "Design and build site", done: false },
+    { text: "Client review and revisions", done: false },
     { text: "Deploy and connect to domain", done: false },
+  ]},
+  { id: "sq4", name: "Website: PJ", type: "side", status: "active", description: "Website build for PJ", xpReward: null, steps: [
+    { text: "Gather content, branding, and requirements from client", done: false },
+    { text: "Design and build site", done: false },
+    { text: "Client review and revisions", done: false },
+    { text: "Deploy and connect to domain", done: false },
+  ]},
+  { id: "sq5", name: "Music: Brecik — Daddy Cool", type: "side", status: "active", description: "Music production for Brecik — Daddy Cool", xpReward: null, steps: [
+    { text: "Confirm arrangement and production direction", done: false },
+    { text: "Complete production and rough mix", done: false },
+    { text: "Send for feedback and revise", done: false },
+    { text: "Final mix/master and deliver", done: false },
+  ]},
+  { id: "sq6", name: "Music: Brecik — Superfly Guy", type: "side", status: "active", description: "Music production for Brecik — Superfly Guy", xpReward: null, steps: [
+    { text: "Confirm arrangement and production direction", done: false },
+    { text: "Complete production and rough mix", done: false },
+    { text: "Send for feedback and revise", done: false },
+    { text: "Final mix/master and deliver", done: false },
   ]},
 
   // ── BELVU / OPS ──────────────────────────────────────────────────────────────
@@ -2536,6 +2516,7 @@ function App() {
   }, []);
   const [expandedQuest, setExpandedQuest] = useState(null);
   const [collapsedCategories, setCollapsedCategories] = useState({});
+  const [mainQuestTab, setMainQuestTab] = useState("all");
   const [generatingSteps, setGeneratingSteps] = useState(false);
   const [questCompleteOverlay, setQuestCompleteOverlay] = useState(null);
   const [levelUpOverlay, setLevelUpOverlay] = useState(null);
@@ -3722,11 +3703,11 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
           transition: "all 0.8s cubic-bezier(0.4, 0, 0.2, 1)",
         }}>
           {/* Hamburger Menu Button - top left */}
-          <div onClick={() => setShowSettings(true)} style={{
+          <div onClick={(e) => { e.stopPropagation(); setShowSettings(true); }} style={{
             position: 'absolute', top: '50%', left: '16px', transform: 'translateY(-50%)',
             width: '36px', height: '36px', borderRadius: '10px',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer',
+            cursor: 'pointer', zIndex: 51,
           }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8a7a65" strokeWidth="2" strokeLinecap="round">
               <line x1="3" y1="6" x2="21" y2="6" />
@@ -3851,7 +3832,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
 
             {/* Core Stats - derived from skills */}
             <Panel>
-              <SectionHeader icon={<CrossedSwordsIcon />} title="Core Attributes" subtitle="Derived from skill levels" />
+              <SectionHeader icon={<CrossedSwordsIcon />} title="Core Attributes" />
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 12px" }}>
                 {Object.entries(deriveStats(skills)).map(([key, val]) => {
                   const src = STAT_FROM_SKILLS[key];
@@ -4134,9 +4115,20 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
                 { key: "side", label: "Side Quests", icon: <PinIcon size={11} />, color: "#8a7a65" },
                 { key: "misc", label: "Miscellaneous", icon: <MiscIcon size={11} />, color: "#6b5d4a" },
               ].map(category => {
-                const filtered = quests.filter(q => q.type === category.key && q.status === "active");
-                if (filtered.length === 0) return null;
+                const allInCategory = quests.filter(q => q.type === category.key && q.status === "active");
+                if (allInCategory.length === 0) return null;
                 const isCollapsed = collapsedCategories[category.key];
+
+                // Sub-tab filtering for main quests
+                const mainSubTabs = [
+                  { key: "all", label: "All" },
+                  { key: "belvu", label: "Belvu / Ops" },
+                  { key: "tech", label: "Tech / Build" },
+                  { key: "self", label: "Self / Mission" },
+                ];
+                const filtered = category.key === "main" && mainQuestTab !== "all"
+                  ? allInCategory.filter(q => q.id.startsWith(mainQuestTab + "-"))
+                  : allInCategory;
 
                 return (
                   <div key={category.key} style={{ marginBottom: "8px" }}>
@@ -4160,6 +4152,36 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
                         fontSize: "9px", color: "#5a4f40", fontFamily: "'Fira Code', monospace",
                       }}>{filtered.length}</span>
                     </div>
+
+                    {/* Sub-tabs for Main Quests */}
+                    {category.key === "main" && !isCollapsed && (
+                      <div style={{
+                        display: "flex", gap: "0px", padding: "6px 4px 2px",
+                        borderBottom: "1px solid rgba(245,158,11,0.06)",
+                      }}>
+                        {mainSubTabs.map(tab => {
+                          const isActive = mainQuestTab === tab.key;
+                          return (
+                            <div
+                              key={tab.key}
+                              onClick={(e) => { e.stopPropagation(); setMainQuestTab(tab.key); }}
+                              style={{
+                                padding: "4px 10px",
+                                fontSize: "9px",
+                                fontFamily: "'Cinzel', serif",
+                                letterSpacing: "1.5px",
+                                textTransform: "uppercase",
+                                cursor: "pointer",
+                                color: isActive ? "#f5c842" : "#6b5d4a",
+                                borderBottom: isActive ? "2px solid #f59e0b" : "2px solid transparent",
+                                transition: "color 0.2s, border-color 0.2s",
+                                userSelect: "none",
+                              }}
+                            >{tab.label}</div>
+                          );
+                        })}
+                      </div>
+                    )}
 
                     {/* Quest List - smooth drawer */}
                     <div style={{
