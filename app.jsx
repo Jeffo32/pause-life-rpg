@@ -2744,10 +2744,36 @@ function App() {
 
   // ── Sound File Playback ──
   const soundCacheRef = useRef({});
+  const ALL_SOUND_PATHS = [
+    "Sounds/OOT_Navi_Hello1.wav", "Sounds/OOT_Navi_Hello2.wav", "Sounds/OOT_Navi_Hello3.wav",
+    "Sounds/OOT_Navi_Hello4.wav", "Sounds/OOT_Navi_Hello5.wav",
+    "Sounds/OOT_Navi_Hey1.wav", "Sounds/OOT_Navi_Hey2.wav", "Sounds/OOT_Navi_Hey3.wav",
+    "Sounds/OOT_Navi_Hey4.wav", "Sounds/OOT_Navi_Hey5.wav",
+    "Sounds/OOT_Navi_Listen1.wav", "Sounds/OOT_Navi_Listen2.wav", "Sounds/OOT_Navi_Listen3.wav",
+    "Sounds/OOT_Navi_Listen4.wav", "Sounds/OOT_Navi_Listen5.wav",
+    "Sounds/OOT_PauseMenu_Open.wav", "Sounds/OOT_PauseMenu_Close.wav",
+    "Sounds/OOT_xp_collected.wav", "Sounds/OOT_Selection.wav",
+  ];
+
+  // Preload all sounds on mount for instant playback
+  useEffect(() => {
+    ALL_SOUND_PATHS.forEach(path => {
+      if (!soundCacheRef.current[path]) {
+        const a = new Audio(path);
+        a.preload = "auto";
+        a.load();
+        soundCacheRef.current[path] = a;
+      }
+    });
+  }, []);
+
   const playSound = useCallback((path) => {
     try {
       if (!soundCacheRef.current[path]) {
-        soundCacheRef.current[path] = new Audio(path);
+        const a = new Audio(path);
+        a.preload = "auto";
+        a.load();
+        soundCacheRef.current[path] = a;
       }
       const audio = soundCacheRef.current[path];
       audio.currentTime = 0;
@@ -2755,23 +2781,7 @@ function App() {
     } catch {}
   }, []);
 
-  const NAVI_SOUNDS = [
-    "Sounds/OOT_Navi_Hello1.wav",
-    "Sounds/OOT_Navi_Hello2.wav",
-    "Sounds/OOT_Navi_Hello3.wav",
-    "Sounds/OOT_Navi_Hello4.wav",
-    "Sounds/OOT_Navi_Hello5.wav",
-    "Sounds/OOT_Navi_Hey1.wav",
-    "Sounds/OOT_Navi_Hey2.wav",
-    "Sounds/OOT_Navi_Hey3.wav",
-    "Sounds/OOT_Navi_Hey4.wav",
-    "Sounds/OOT_Navi_Hey5.wav",
-    "Sounds/OOT_Navi_Listen1.wav",
-    "Sounds/OOT_Navi_Listen2.wav",
-    "Sounds/OOT_Navi_Listen3.wav",
-    "Sounds/OOT_Navi_Listen4.wav",
-    "Sounds/OOT_Navi_Listen5.wav",
-  ];
+  const NAVI_SOUNDS = ALL_SOUND_PATHS.slice(0, 15);
 
   const playNaviSound = useCallback(() => {
     const sound = NAVI_SOUNDS[Math.floor(Math.random() * NAVI_SOUNDS.length)];
@@ -2781,6 +2791,7 @@ function App() {
   const playMenuOpen = useCallback(() => playSound("Sounds/OOT_PauseMenu_Open.wav"), [playSound]);
   const playMenuClose = useCallback(() => playSound("Sounds/OOT_PauseMenu_Close.wav"), [playSound]);
   const playXpCollected = useCallback(() => playSound("Sounds/OOT_xp_collected.wav"), [playSound]);
+  const playSelection = useCallback(() => playSound("Sounds/OOT_Selection.wav"), [playSound]);
 
   // ── Haptic Feedback ──
   const haptic = useCallback((duration = 10) => {
@@ -3150,6 +3161,7 @@ function App() {
     if (!wasChecked) {
       // Checking step — award step XP
       playStepCompleteSound();
+      playXpCollected();
       const result = await awardXP(xpInfo.perStep, character);
       // Also award skill XP based on quest auto-detection
       const detectedSkill = detectQuestSkill(quest);
@@ -3180,6 +3192,7 @@ function App() {
         // Quest complete shows after XP splash clears (2.2s)
         setTimeout(async () => {
           playQuestCompleteSound();
+          playXpCollected();
           setQuestCompleteOverlay({ quest, xp: xpInfo.bonus, totalXP: xpInfo.total });
           setExpandedQuest(null);
           // Award completion bonus - level up will queue after quest splash
@@ -3221,7 +3234,7 @@ function App() {
         }
       }
     }
-  }, [quests, character, skills, saveQuests, saveSkills, getQuestXP, awardXP, detectQuestSkill, playStepCompleteSound, playQuestCompleteSound, showXpSplash]);
+  }, [quests, character, skills, saveQuests, saveSkills, getQuestXP, awardXP, detectQuestSkill, playStepCompleteSound, playQuestCompleteSound, playXpCollected, showXpSplash]);
 
   const generateStepsForQuest = useCallback(async (questName, questDesc) => {
     setGeneratingSteps(true);
@@ -3395,7 +3408,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
         </div>
 
         {/* Spacer for fixed header */}
-        <div style={{ height: "calc(80px + env(safe-area-inset-top, 0px))" }} />
+        <div style={{ height: "calc(100px + env(safe-area-inset-top, 0px))" }} />
 
         {/* ═══ CHARACTER TAB ═══ */}
         {activeTab === "character" && (
@@ -3496,7 +3509,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
                     ? `${SKILL_CATEGORIES_DATA[src.primary]?.label}+${SKILL_CATEGORIES_DATA[src.secondary]?.label}`
                     : SKILL_CATEGORIES_DATA[src.primary]?.label;
                   return (
-                    <div key={key} onClick={() => { setStatsExpanded(key); setStatCatOpen(null); setStatSkillOpen(null); }} style={{ cursor: "pointer" }}>
+                    <div key={key} onClick={() => { setStatsExpanded(key); setStatCatOpen(null); setStatSkillOpen(null); playSelection(); haptic(10); }} style={{ cursor: "pointer" }}>
                       <StatBar label={key} value={val} icon={STAT_ICONS[key]} subtitle={srcLabel} />
                     </div>
                   );
@@ -3978,6 +3991,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
                                       } : q), "Quest completed");
                                       setExpandedQuest(null);
                                       playQuestCompleteSound();
+                                      playXpCollected();
                                       setQuestCompleteOverlay({ quest, xp: xpInfo.bonus, totalXP: stepXpTotal + xpInfo.bonus });
                                       const result = await awardXP(stepXpTotal + xpInfo.bonus, character);
                                       setTimeout(() => setQuestCompleteOverlay(null), 3500);
@@ -4374,6 +4388,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
                           isCategory: true,
                           catSkills,
                         });
+                        playSelection(); haptic(10);
                       } else if (node && node.type !== "hub") {
                         setSkillDetail({
                           name: node.name,
@@ -4384,6 +4399,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
                           color: node.color,
                           idx: node.idx,
                         });
+                        playSelection(); haptic(10);
                       }
                     }
                   }
@@ -5962,11 +5978,11 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
       }}>
         {tabs.map(tab => (
           <button key={tab.id} onClick={() => {
+            haptic(15);
             if (tab.id === "character" && activeTab === "character") {
               setHeroExpanded(prev => !prev);
             } else {
               setActiveTab(tab.id);
-              haptic();
               if (tab.id !== "character") setHeroExpanded(false);
             }
           }} style={{
