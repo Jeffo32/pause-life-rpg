@@ -2742,6 +2742,37 @@ function App() {
     } catch {}
   }, [getAudioCtx, playNote]);
 
+  // ── Sound File Playback ──
+  const soundCacheRef = useRef({});
+  const playSound = useCallback((path) => {
+    try {
+      if (!soundCacheRef.current[path]) {
+        soundCacheRef.current[path] = new Audio(path);
+      }
+      const audio = soundCacheRef.current[path];
+      audio.currentTime = 0;
+      audio.play().catch(() => {});
+    } catch {}
+  }, []);
+
+  const NAVI_SOUNDS = [
+    "Sounds/OOT_Navi_Listen3.wav",
+  ];
+
+  const playNaviSound = useCallback(() => {
+    const sound = NAVI_SOUNDS[Math.floor(Math.random() * NAVI_SOUNDS.length)];
+    playSound(sound);
+  }, [playSound]);
+
+  const playMenuOpen = useCallback(() => playSound("Sounds/PauseMenu_Open.wav"), [playSound]);
+  const playMenuClose = useCallback(() => playSound("Sounds/PauseMenu_Close.wav"), [playSound]);
+  const playXpCollected = useCallback(() => playSound("Sounds/xp_collected.wav"), [playSound]);
+
+  // ── Haptic Feedback ──
+  const haptic = useCallback((duration = 10) => {
+    try { if (navigator.vibrate) navigator.vibrate(duration); } catch {}
+  }, []);
+
   // ── XP Calculation ──
   const getQuestXP = useCallback((quest) => {
     if (!quest.steps || quest.steps.length === 0) return { perStep: 0, bonus: 0, total: 0 };
@@ -2942,7 +2973,9 @@ function App() {
     setNaviMessage(msg);
     if (naviTimerRef.current) clearTimeout(naviTimerRef.current);
     naviTimerRef.current = setTimeout(() => setNaviMessage(null), 5000);
-  }, []);
+    haptic(15);
+    playNaviSound();
+  }, [haptic, playNaviSound]);
 
   // Periodic reminder check every 5 minutes
   useEffect(() => {
@@ -3312,7 +3345,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
           transition: "all 0.8s cubic-bezier(0.4, 0, 0.2, 1)",
         }}>
           {/* Hamburger Menu Button - top left */}
-          <div onClick={(e) => { e.stopPropagation(); setShowSettings(true); }} style={{
+          <div onClick={(e) => { e.stopPropagation(); setShowSettings(true); haptic(); playMenuOpen(); }} style={{
             position: 'absolute', top: '50%', left: '16px', transform: 'translateY(-50%)',
             width: '36px', height: '36px', borderRadius: '10px',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -3528,6 +3561,8 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
               await awardXP(Math.round(xpAmount * 0.5), character);
               showXpSplash(xpAmount, challenge.skill);
             }
+            haptic(20);
+            playXpCollected();
             playStepCompleteSound();
           };
 
@@ -5917,6 +5952,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
               setHeroExpanded(prev => !prev);
             } else {
               setActiveTab(tab.id);
+              haptic();
               if (tab.id !== "character") setHeroExpanded(false);
             }
           }} style={{
@@ -6123,7 +6159,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
     {showSettings && ReactDOM.createPortal(
       <div style={{ position: 'fixed', inset: 0, zIndex: 9998, display: 'flex', justifyContent: 'center', alignItems: 'center', fontFamily: "'Crimson Text', serif" }}>
         {/* Backdrop */}
-        <div onClick={() => setShowSettings(false)} style={{
+        <div onClick={() => { setShowSettings(false); haptic(); playMenuClose(); }} style={{
           position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)',
         }} />
         {/* Panel */}
@@ -6134,7 +6170,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
           padding: '24px 20px', boxShadow: '0 0 60px rgba(0,0,0,0.8), 0 0 30px rgba(245,158,11,0.1)',
         }}>
           {/* Close button */}
-          <div onClick={() => setShowSettings(false)} style={{
+          <div onClick={() => { setShowSettings(false); haptic(); playMenuClose(); }} style={{
             position: 'absolute', top: '12px', right: '12px', width: '28px', height: '28px',
             display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
             color: '#8a7a65', fontSize: '18px', opacity: 0.7,
@@ -6149,11 +6185,11 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
           {/* ── Data Backup ── */}
           <div style={{ marginBottom: '20px' }}>
             <div style={{ fontSize: '11px', color: '#8a7a65', letterSpacing: '2px', fontFamily: "'Cinzel', serif", marginBottom: '10px', textTransform: 'uppercase' }}>Data Backup</div>
-            <div style={{ display: 'flex', flexDirection: 'row', gap: '10px', width: '100%' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%' }}>
               <button onClick={() => { saveBackup(); alert('Backup saved!'); }} style={{
-                flex: '1 1 0%', padding: '10px', background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)',
+                width: '100%', padding: '10px', background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)',
                 borderRadius: '10px', color: '#4ade80', fontFamily: "'Cinzel', serif", fontSize: '13px',
-                cursor: 'pointer', letterSpacing: '1px', minWidth: 0,
+                cursor: 'pointer', letterSpacing: '1px',
               }}>SAVE</button>
               <button onClick={() => {
                 const result = loadBackup();
@@ -6161,9 +6197,9 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
                 alert(`Restored ${result.count} data keys. Reloading...`);
                 window.location.reload();
               }} style={{
-                flex: '1 1 0%', padding: '10px', background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)',
+                width: '100%', padding: '10px', background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)',
                 borderRadius: '10px', color: '#60a5fa', fontFamily: "'Cinzel', serif", fontSize: '13px',
-                cursor: 'pointer', letterSpacing: '1px', minWidth: 0,
+                cursor: 'pointer', letterSpacing: '1px',
               }}>LOAD</button>
             </div>
             {(() => { const d = getBackupDate(); return d ? (
