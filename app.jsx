@@ -2176,36 +2176,7 @@ function QuestCreator({ onSave, onCancel, generateSteps, isGenerating, initialVa
 
   const removeStep = (idx) => setSteps(prev => prev.filter((_, i) => i !== idx));
 
-  const testApiConnection = useCallback(async () => {
-    setApiTesting(true);
-    setApiTestResult(null);
-    try {
-      const key = localStorage.getItem("rpg-api-key") || "";
-      if (!key) { setApiTestResult({ ok: false, msg: "No API key stored." }); setApiTesting(false); return; }
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
-        body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 10, messages: [{ role: "user", content: "Say hi" }] }),
-      });
-      const data = await res.json();
-      if (data.error) {
-        setApiTestResult({ ok: false, msg: data.error.message || data.error.type || "Unknown error" });
-      } else {
-        setApiTestResult({ ok: true, msg: "Connection successful!" });
-      }
-    } catch (err) {
-      setApiTestResult({ ok: false, msg: "Network error: " + err.message });
-    }
-    setApiTesting(false);
-  }, []);
 
-  const formatApiError = (errMsg) => {
-    if (/credit balance/i.test(errMsg)) return "Your API key's workspace has no credits. Go to console.anthropic.com → check the workspace (top-left) → Plans & Billing to add credits. Note: each workspace has its own balance.";
-    if (/invalid.*key|authentication|unauthorized/i.test(errMsg)) return "Invalid API key. Go to console.anthropic.com → API Keys to get a valid key, then update it in Settings.";
-    if (/rate limit|too many/i.test(errMsg)) return "Rate limited — too many requests. Wait a moment and try again.";
-    if (/overloaded/i.test(errMsg)) return "Claude is currently overloaded. Try again in a few seconds.";
-    return errMsg + " Check your API key in Settings.";
-  };
 
   const handleSmartBuild = async () => {
     const input = aiPrompt.trim() || name.trim();
@@ -2242,7 +2213,7 @@ Respond with ONLY valid JSON, no markdown or backticks:
         }),
       });
       const data = await response.json();
-      if (data.error) throw new Error(formatApiError(data.error.message || data.error.type || "Unknown API error"));
+      if (data.error) throw new Error(data.error.message || data.error.type || "Unknown API error");
       const rawText = data.content?.map(c => c.text || "").join("") || "";
       const parsed = JSON.parse(rawText.replace(/```json|```/g, "").trim());
 
@@ -2549,25 +2520,18 @@ function App() {
 
   // ── Settings State ──
   const [showSettings, setShowSettings] = useState(false);
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem("rpg-api-key") || "");
-  const [apiKeyLocked, setApiKeyLocked] = useState(() => !!localStorage.getItem("rpg-api-key"));
-  const [apiTestResult, setApiTestResult] = useState(null);
-  const [apiTesting, setApiTesting] = useState(false);
   const [brightness, setBrightness] = useState(() => {
     const saved = localStorage.getItem("rpg-brightness");
     return saved ? parseFloat(saved) : 1;
   });
-  const [appTheme, setAppTheme] = useState(() => localStorage.getItem("rpg-theme") || "dark-fantasy");
+  // Navi speech bubble
+  const [naviMessage, setNaviMessage] = useState(null);
+  const naviTimerRef = useRef(null);
 
   // Persist brightness
   useEffect(() => {
     localStorage.setItem("rpg-brightness", String(brightness));
   }, [brightness]);
-
-  // Persist theme
-  useEffect(() => {
-    localStorage.setItem("rpg-theme", appTheme);
-  }, [appTheme]);
 
   // Global drag management: scroll prevention, auto-scroll, ghost position, haptics, drop
   useEffect(() => {
@@ -2679,9 +2643,6 @@ function App() {
   }, [isDragging, dragItem, equipment, assets]);
   const [headerDimmed, setHeaderDimmed] = useState(false);
   const [heroExpanded, setHeroExpanded] = useState(false);
-  const [journalStep, setJournalStep] = useState(0);
-  const [journalDraft, setJournalDraft] = useState({ amazing: "", learned: "", grateful: "" });
-  const [journalView, setJournalView] = useState("menu");
   const avatarInputRef = useRef(null);
   const audioCtxRef = useRef(null);
   const undoTimerRef = useRef(null);
@@ -2870,308 +2831,118 @@ function App() {
 
   // Load all data
 
-  // ─── AI COMMAND SYSTEM ───
-  const [aiOpen, setAiOpen] = useState(false);
-  const [aiMessages, setAiMessages] = useState([]);
-  const [aiInput, setAiInput] = useState("");
-  const [aiLoading, setAiLoading] = useState(false);
-  const aiInputRef = useRef(null);
-  const [isListening, setIsListening] = useState(false);
-  const recognitionRef = useRef(null);
+  // ─── NAVI MESSAGES ───
 
-  const startListening = useCallback((onResult) => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setAiMessages(prev => [...prev, { role: "assistant", text: "Voice not supported in this browser. Try Safari or Chrome." }]);
-      return;
-    }
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.lang = "en-AU";
-    recognitionRef.current = recognition;
+  const NAVI_MESSAGES = [
+    "Hey! Listen!",
+    "What are you doing? You're supposed to be grinding!",
+    "You're looking a bit small bro, start lifting something already.",
+    "The grind doesn't care about your feelings. Get moving.",
+    "Your future self is watching. Make them proud.",
+    "One more rep. One more set. One more day. That's all it takes.",
+    "Legends aren't born. They're built, one quest at a time.",
+    "Stop scrolling. Start rolling. The dice of fate await.",
+    "You didn't come this far to only come this far.",
+    "Every champion was once a contender who refused to give up.",
+    "The dungeon won't clear itself. Let's go!",
+    "Small steps still move you forward, adventurer.",
+    "Your XP bar won't fill itself. Time to earn it.",
+    "Rest is important, but don't confuse it with quitting.",
+    "The strongest steel is forged in the hottest fire.",
+    "What quest are you working on? Don't lose focus!",
+    "Discipline is choosing between what you want now and what you want most.",
+    "The battlefield is won in the mind before the body follows.",
+    "Are you a side character or the main character? Act like it.",
+    "Your comfort zone is a beautiful place, but nothing ever grows there.",
+    "Hey, you haven't checked your daily challenges yet!",
+    "You're stronger than yesterday. Keep that streak going.",
+    "The path to legendary starts with showing up today.",
+    "Don't count the days. Make the days count.",
+    "Even the mightiest warrior started at Level 1.",
+    "Progress, not perfection. That's the way.",
+    "Your skills are leveling up. Can you feel it?",
+    "The hardest part is starting. You've already done that.",
+    "No one ever drowned in sweat. Push harder!",
+    "A warrior's greatest enemy is themselves. Conquer that first.",
+    "You've got the heart of a lion. Show the world.",
+    "Today's pain is tomorrow's power. Embrace it.",
+    "Stop wishing. Start doing. The quest board is waiting.",
+    "Consistency beats intensity. Every. Single. Time.",
+    "You're not tired, you're just getting warmed up!",
+    "The only bad workout is the one that didn't happen.",
+    "How's your water intake? Hydration is a buff, not optional.",
+    "You have the same 24 hours as everyone else. Use them wisely.",
+    "Fear is temporary. Regret is forever. Choose wisely.",
+    "Your body is your most important piece of equipment. Maintain it.",
+    "Champions do ordinary things with extraordinary consistency.",
+    "Did you complete today's challenges? No excuses!",
+    "The only limit that exists is the one you accept.",
+    "Rise and grind, adventurer. Dawn breaks for the determined.",
+    "Excuses don't burn calories. Get moving!",
+    "The secret to getting ahead is getting started.",
+    "You're one decision away from a totally different life.",
+    "Weak moments build strong people. Keep pushing.",
+    "Your daily XP is waiting. Go claim it!",
+    "Adventurers don't wait for opportunity. They create it.",
+    "Hard work beats talent when talent doesn't work hard.",
+    "The quest isn't going to complete itself. What's next?",
+    "Sweat today, shine tomorrow. That's the deal.",
+    "You miss 100% of the quests you don't accept.",
+    "The graveyard is full of unfulfilled potential. Don't join them.",
+    "Hey! Have you stretched today? Flexibility is a stat too!",
+    "Your character grows through challenge, not comfort.",
+    "Procrastination is the thief of XP. Don't let it win.",
+    "A day without progress is a day wasted. Make it count.",
+    "You're doing better than you think. But you could do more.",
+    "The iron doesn't care about your mood. Pick it up anyway.",
+    "Every master was once a disaster. Keep leveling up.",
+    "Attack the day before it attacks you.",
+    "Your future is created by what you do today, not tomorrow.",
+    "Movement is medicine. Get your dose.",
+    "You can't deposit excuses in the bank of gains.",
+    "Stay hungry. Stay foolish. Stay grinding.",
+    "The world needs more heroes. Will you answer the call?",
+    "Don't just exist. Quest. Grow. Conquer.",
+    "Read a book. Learn a skill. Level up your mind.",
+    "Comfort is the enemy of growth. Step outside it.",
+    "Your skills page is looking dusty. Time to train!",
+    "Winners focus on winning. Losers focus on winners. Focus.",
+    "What's one thing you can do right now to move forward?",
+    "A smooth sea never made a skilled sailor.",
+    "The pain you feel today is the strength you feel tomorrow.",
+    "Stop making excuses and start making progress.",
+    "If it was easy, everyone would do it. You're not everyone.",
+    "Your inventory of achievements grows one action at a time.",
+    "Run when you can, walk if you must, crawl if you have to. Just never stop.",
+    "The difference between try and triumph is just a little umph.",
+    "Look at your quest log. What's gathering dust?",
+    "You didn't start this journey to quit halfway.",
+    "Sweat is just fat crying. Make it weep.",
+    "A journey of a thousand miles begins with a single step. Take it.",
+    "Your potential is limitless. Your time is not. Act now.",
+    "Train like you mean it. Rest like you earned it.",
+    "The only person you need to be better than is who you were yesterday.",
+    "Great things never come from comfort zones.",
+    "Don't wait for motivation. Create discipline.",
+    "Your level doesn't define you. Your effort does.",
+    "The grind is the glory. Embrace the process.",
+    "You have unfinished quests. Let's close them out.",
+    "Somewhere, someone busier than you is training right now.",
+    "Go earn your rest. You haven't earned it yet.",
+    "Complaining burns zero calories. Get to work.",
+    "Remember why you started. Now finish what you began.",
+    "The best time to start was yesterday. The next best time is now.",
+    "Be the hero of your own story, not the victim.",
+    "Make yourself proud. That's the real quest.",
+    "Hey! Just checking in. You've got this, adventurer.",
+  ];
 
-    let finalTranscript = "";
-
-    recognition.onresult = (event) => {
-      let interim = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const t = event.results[i][0].transcript;
-        if (event.results[i].isFinal) {
-          finalTranscript += t + " ";
-        } else {
-          interim = t;
-        }
-      }
-      // Show live transcript in input
-      setAiInput(finalTranscript + interim);
-    };
-
-    recognition.onend = () => {
-      setIsListening(false);
-      if (finalTranscript.trim() && onResult) {
-        onResult(finalTranscript.trim());
-      }
-    };
-
-    recognition.onerror = (e) => {
-      setIsListening(false);
-      if (e.error !== "no-speech") {
-        console.error("Speech error:", e.error);
-      }
-    };
-
-    setIsListening(true);
-    recognition.start();
-    if (navigator.vibrate) navigator.vibrate(20);
+  const showNaviMessage = useCallback(() => {
+    const msg = NAVI_MESSAGES[Math.floor(Math.random() * NAVI_MESSAGES.length)];
+    setNaviMessage(msg);
+    if (naviTimerRef.current) clearTimeout(naviTimerRef.current);
+    naviTimerRef.current = setTimeout(() => setNaviMessage(null), 5000);
   }, []);
-
-  const stopListening = useCallback(() => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-    }
-    setIsListening(false);
-  }, []);
-  const aiScrollRef = useRef(null);
-
-  const executeAiActions = useCallback((actions, msgs) => {
-    if (!actions || !Array.isArray(actions)) return;
-    const feedback = [];
-    actions.forEach(action => {
-      try {
-        if (action.type === "create_quest") {
-          const newQuest = {
-            id: "q" + Date.now() + Math.random().toString(36).slice(2, 5),
-            name: action.name,
-            description: action.description || "",
-            type: action.questType || "side",
-            status: "active",
-            xpReward: null,
-            steps: (action.steps || []).map(s => ({ text: s, done: false })),
-          };
-          saveQuests([...quests, newQuest], "Quest created by AI");
-          feedback.push("⚔ Quest created: " + action.name);
-        } else if (action.type === "add_item") {
-          const newItem = {
-            name: action.name,
-            rarity: action.rarity || "common",
-            category: action.category || "misc",
-            subcategory: action.subcategory || "",
-            specs: action.specs || "",
-            description: action.description || "",
-            image: null,
-          };
-          saveAssets([...assets, newItem]);
-          feedback.push("🎒 Item added: " + action.name);
-        } else if (action.type === "complete_challenge") {
-          const today = new Date().toDateString();
-          const todayLog = challengeLog[today] || {};
-          const ch = challenges.find(c => c.name.toLowerCase().includes((action.name || "").toLowerCase()));
-          if (ch && !todayLog[ch.id]) {
-            const newLog = { ...challengeLog, [today]: { ...todayLog, [ch.id]: true } };
-            setChallengeLog(newLog);
-            saveData("rpg-challenge-log", newLog);
-            feedback.push("✅ Challenge completed: " + ch.name);
-          }
-        } else if (action.type === "complete_step") {
-          const quest = quests.find(q => q.name.toLowerCase().includes((action.questName || "").toLowerCase()));
-          if (quest) {
-            const stepIdx = quest.steps?.findIndex(s => !s.done && s.text.toLowerCase().includes((action.stepText || "").toLowerCase()));
-            if (stepIdx >= 0) {
-              const newSteps = [...quest.steps];
-              newSteps[stepIdx] = { ...newSteps[stepIdx], done: true };
-              saveQuests(quests.map(q => q.id === quest.id ? { ...q, steps: newSteps } : q), "Step completed by AI");
-              feedback.push("◆ Step completed: " + quest.steps[stepIdx].text);
-            }
-          }
-        } else if (action.type === "create_reminder") {
-          const newReminder = {
-            id: "rem_" + Date.now() + Math.random().toString(36).slice(2, 5),
-            text: action.text || action.name,
-            createdAt: Date.now(),
-            done: false,
-            snoozedUntil: null,
-            snoozeCount: 0,
-          };
-          const updatedRems = [...reminders, newReminder];
-          setReminders(updatedRems);
-          saveData("rpg-reminders", updatedRems);
-          feedback.push("🔔 Reminder set: " + newReminder.text);
-        }
-      } catch (e) { console.error("AI action error:", e); }
-    });
-    return feedback;
-  }, [quests, assets, challenges, challengeLog, reminders, saveQuests, saveAssets]);
-
-  const sendAiMessage = useCallback(async () => {
-    if (!aiInput.trim() || aiLoading) return;
-    const userMsg = aiInput.trim();
-    setAiInput("");
-    const newMsgs = [...aiMessages, { role: "user", text: userMsg }];
-    setAiMessages(newMsgs);
-    setAiLoading(true);
-
-    try {
-      // Build game state context
-      const activeQuests = quests.filter(q => q.status === "active").map(q => ({
-        name: q.name, type: q.type, description: q.description,
-        steps: q.steps?.map(s => ({ text: s.text, done: s.done })),
-        progress: q.steps ? Math.round(q.steps.filter(s => s.done).length / q.steps.length * 100) : 0,
-      }));
-      const today = new Date().toDateString();
-      const todayLog = challengeLog[today] || {};
-      const challengeStatus = challenges.map(c => ({ name: c.name, skill: c.skill, category: c.category, xp: c.xp, completed: !!todayLog[c.id] }));
-      const inventoryItems = assets.map(a => ({ name: a.name, category: a.category, subcategory: a.subcategory, rarity: a.rarity }));
-      const equippedItems = Object.entries(equipment).filter(([k,v]) => v).map(([k,v]) => ({ slot: k, name: v.name }));
-      const derivedStats = deriveStats(skills);
-
-      // Build weekly challenge history for XP Coach
-      const weekHistory = {};
-      const now = new Date();
-      for (let d = 0; d < 7; d++) {
-        const date = new Date(now);
-        date.setDate(date.getDate() - d);
-        const key = date.toDateString();
-        const dayLog = challengeLog[key] || {};
-        const completed = Object.keys(dayLog).filter(k => dayLog[k]);
-        if (completed.length > 0) {
-          weekHistory[d === 0 ? "today" : d === 1 ? "yesterday" : `${d} days ago`] = {
-            completed: completed.length,
-            categories: completed.map(id => {
-              const ch = challenges.find(c => c.id === id);
-              return ch ? ch.category : "unknown";
-            }),
-          };
-        }
-      }
-      // Category completion rates
-      const catRates = {};
-      Object.keys(SKILL_CATEGORIES_DATA).forEach(cat => {
-        const catChallenges = challenges.filter(c => c.category === cat);
-        let total = 0, done = 0;
-        for (let d = 0; d < 7; d++) {
-          const date = new Date(now);
-          date.setDate(date.getDate() - d);
-          const dayLog = challengeLog[date.toDateString()] || {};
-          catChallenges.forEach(c => { total++; if (dayLog[c.id]) done++; });
-        }
-        catRates[cat] = { total, done, rate: total > 0 ? Math.round(done / total * 100) : 0 };
-      });
-
-      const systemPrompt = `You are a fairy companion AI named Navi inside "Pause - Life RPG", a dark fantasy gamified personal development app for Jefferson Wolfe. You help manage his quests, items, challenges, and provide strategic coaching.
-
-PERSONALITY: Speak like a wise but playful fairy companion. Brief, punchy, motivating. Use dark fantasy metaphors. Never preachy. Always actionable.
-
-CURRENT STATE:
-- Character: ${character.name}, Level ${character.level}, ${character.xp}/${character.xpToNext} XP
-- Stats: ${JSON.stringify(derivedStats)}
-- Active Quests: ${JSON.stringify(activeQuests)}
-- Today's Challenges: ${JSON.stringify(challengeStatus)}
-- Inventory: ${JSON.stringify(inventoryItems)}
-- Equipped: ${JSON.stringify(equippedItems)}
-
-WEEKLY PERFORMANCE (last 7 days):
-${JSON.stringify(weekHistory, null, 1)}
-
-CATEGORY COMPLETION RATES (7-day):
-${Object.entries(catRates).map(([cat, r]) => `- ${cat}: ${r.rate}% (${r.done}/${r.total})`).join("\n")}
-
-SKILL LEVELS:
-${Object.entries(SKILL_CATEGORIES_DATA).map(([k, v]) => {
-  const avg = skills.filter(s => s.category === k && s.tier === "current").reduce((a, s) => a + s.level, 0) / Math.max(1, skills.filter(s => s.category === k && s.tier === "current").length);
-  return `- ${v.label}: avg level ${Math.round(avg)}`;
-}).join("\n")}
-
-VOICE JOURNAL PROCESSING:
-When the user sends a voice journal entry (prefixed with "Process this voice journal entry"):
-1. Extract key events, achievements, and experiences from the transcript
-2. Identify lessons learned
-3. Note things to be grateful for
-4. Extract any actionable items as quest steps or new challenges
-5. Summarize in a warm, encouraging tone
-6. If they mention completing tasks, create appropriate actions
-
-XP COACH RULES:
-When asked about tracking, progress, focus, or coaching:
-1. Identify which categories are being neglected (low completion rate)
-2. Identify which are being crushed (high rate) — acknowledge the grind
-3. Suggest specific swaps or additions to balance the build
-4. Flag if a quest hasn't progressed in a while
-5. Give a concrete "do this next" recommendation
-6. Reference actual challenge names and quest names from the data
-
-ITEM CATEGORIES & SUBCATEGORIES:
-- clothing: hat, sunnies, necklace, chain, jacket, shirt, hoodie, pants, shorts, shoes, boots
-- tech: laptop, desktop, tablet
-- creative_gear: camera, action_cam, lens, mic, headphones, speaker, bag, backpack, case
-- transport: suv, sedan, motorcycle, bicycle
-- misc: accessory, tool, other
-- digital: app, platform, saas, website
-- business: restaurant, agency, brand, venture
-
-RARITY: common, rare, epic, legendary
-
-You MUST respond with valid JSON only. No markdown, no backticks. Format:
-{
-  "message": "Your conversational response to the user",
-  "actions": [
-    { "type": "create_quest", "name": "...", "description": "...", "questType": "main|side", "steps": ["step1", "step2", ...] },
-    { "type": "add_item", "name": "...", "category": "...", "subcategory": "...", "rarity": "...", "specs": "...", "description": "..." },
-    { "type": "complete_challenge", "name": "partial match of challenge name" },
-    { "type": "complete_step", "questName": "partial match", "stepText": "partial match" },
-    { "type": "create_reminder", "text": "...", "interval": "2h" }
-  ]
-}
-
-If no actions needed, return empty actions array. Keep message brief and in-character. Be direct and helpful.`;
-
-      const response = await fetch("/api/claude", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          system: systemPrompt,
-          messages: [
-            ...newMsgs.slice(-10).map(m => ({ role: m.role === "user" ? "user" : "assistant", content: m.text })),
-          ],
-        }),
-      });
-
-      const data = await response.json();
-
-      // Check for API errors
-      if (data.error) {
-        const errMsg = data.error.message || data.error.type || "Unknown API error";
-        setAiMessages(prev => [...prev, { role: "assistant", text: formatApiError(errMsg) }]);
-        setAiLoading(false);
-        return;
-      }
-
-      const rawText = data.content?.map(c => c.text || "").join("") || "";
-
-      // Parse JSON response
-      let parsed;
-      try {
-        parsed = JSON.parse(rawText.replace(/```json|```/g, "").trim());
-      } catch (e) {
-        parsed = { message: rawText, actions: [] };
-      }
-
-      // Execute actions
-      const feedback = executeAiActions(parsed.actions || []);
-      let aiReply = parsed.message || "Done.";
-      if (feedback && feedback.length > 0) {
-        aiReply += "\n\n" + feedback.join("\n");
-      }
-
-      setAiMessages(prev => [...prev, { role: "assistant", text: aiReply }]);
-    } catch (err) {
-      setAiMessages(prev => [...prev, { role: "assistant", text: "Connection failed. Try again." }]);
-      console.error("AI error:", err);
-    }
-    setAiLoading(false);
-  }, [aiInput, aiMessages, aiLoading, quests, assets, challenges, challengeLog, character, skills, equipment, executeAiActions]);
 
   // Periodic reminder check every 5 minutes
   useEffect(() => {
@@ -3185,9 +2956,6 @@ If no actions needed, return empty actions array. Keep message brief and in-char
   }, [reminders, activeNudge]);
 
 
-  useEffect(() => {
-    if (aiScrollRef.current) aiScrollRef.current.scrollTop = aiScrollRef.current.scrollHeight;
-  }, [aiMessages, aiLoading]);
 
   useEffect(() => {
     (async () => {
@@ -3429,7 +3197,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
         }),
       });
       const data = await response.json();
-      if (data.error) throw new Error(formatApiError(data.error.message || data.error.type || "Unknown API error"));
+      if (data.error) throw new Error(data.error.message || data.error.type || "Unknown API error");
       const text = data.content?.map(i => i.text || "").join("") || "[]";
       const clean = text.replace(/```json|```/g, "").trim();
       const steps = JSON.parse(clean);
@@ -3455,12 +3223,6 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
   }, []);
 
 
-  // ── Journal ──
-  const saveJournal = useCallback(async (date, entry) => {
-    const updated = { ...journalEntries, [date]: entry };
-    setJournalEntries(updated);
-    await saveData("rpg-journal", updated);
-  }, [journalEntries]);
 
   const handleAvatarUpload = useCallback((e) => {
     const file = e.target.files?.[0];
@@ -3495,7 +3257,6 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
     { id: "character", label: "Hero", icon: <HelmetIcon size={18} color="currentColor" /> },
     { id: "challenges", label: "Daily", icon: <TargetIcon size={18} color="currentColor" /> },
     { id: "quests", label: "Quests", icon: <ScrollIcon size={18} color="currentColor" /> },
-    { id: "journal", label: "Journal", icon: <BookIcon size={18} color="currentColor" /> },
     { id: "skills", label: "Skills", icon: <LightningIcon size={18} color="currentColor" /> },
     { id: "inventory", label: "Items", icon: <BackpackIcon size={18} color="currentColor" /> },
   ];
@@ -3536,7 +3297,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
         background: "radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.6) 100%)",
       }} />
 
-      <div style={{ position: "relative", zIndex: 2, maxWidth: "900px", margin: "0 auto", padding: "0 10px", paddingBottom: activeTab === "character" ? "0" : "80px", height: "100vh", overflowY: activeTab === "character" ? "hidden" : "auto", overflowX: "hidden" }}>
+      <div style={{ position: "relative", zIndex: 2, maxWidth: "900px", margin: "0 auto", padding: "0 10px", paddingBottom: activeTab === "character" ? (heroExpanded ? "80px" : "0") : "80px", height: "100vh", overflowY: (activeTab === "character" && !heroExpanded) ? "hidden" : "auto", overflowX: "hidden" }}>
 
         {/* Title Banner — Liquid Glass (fixed) */}
         <div style={{
@@ -4297,313 +4058,6 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
           </div>
         )}
 
-        {/* ═══ JOURNAL TAB ═══ */}
-        {activeTab === "journal" && (() => {
-          const today = new Date().toDateString();
-          const todayEntry = journalEntries[today];
-          const alreadySaved = !!todayEntry;
-          const PROMPTS = [
-            { key: "amazing", label: "What amazing things happened today?", icon: <SparkleIcon size={14} color="#f5c842" /> },
-            { key: "learned", label: "What did you learn?", icon: <BookIcon size={14} color="#f5c842" /> },
-            { key: "grateful", label: "What are you grateful for?", icon: <HeartIcon size={14} color="#f5c842" /> },
-          ];
-          const currentPrompt = PROMPTS[journalStep];
-          const allAnswered = journalDraft.amazing.trim() && journalDraft.learned.trim() && journalDraft.grateful.trim();
-          const allDates = Object.keys(journalEntries).sort((a, b) => new Date(b) - new Date(a));
-
-          return (
-            <div style={{ display: "grid", gap: "10px", opacity: mounted ? 1 : 0, transform: mounted ? "scale(1) translateY(0)" : "scale(0.95) translateY(15px)", transition: "opacity 0.5s 0.3s, transform 0.5s cubic-bezier(0.4, 0, 0.2, 1) 0.3s" }}>
-
-              {/* ─── MENU VIEW ─── */}
-              {journalView === "menu" && (
-                <Panel>
-                  <SectionHeader icon={<BookIcon />} title="Adventurer's Journal" subtitle="Record your journey" />
-
-                  {alreadySaved && (
-                    <div style={{
-                      padding: "8px 10px", marginBottom: "12px", borderRadius: "6px",
-                      background: "rgba(74,122,58,0.08)", border: "1px solid rgba(74,122,58,0.15)",
-                      fontSize: "11px", color: "#4a7a3a", fontFamily: "'Cinzel', serif",
-                      letterSpacing: "1px", textAlign: "center",
-                    }}>✦ TODAY'S ENTRY RECORDED ✦</div>
-                  )}
-
-                  {/* Voice Journal Entry */}
-                  <div
-                    onClick={() => {
-                      setAiOpen(true);
-                      setTimeout(() => {
-                        setAiInput("");
-                        startListening((text) => {
-                          // Send voice transcript to AI for journal processing
-                          const journalPrompt = `Process this voice journal entry. Extract what happened today, what was learned, and what to be grateful for. Also identify any actionable items (new quests, completed challenges, etc). Here's what I said: "${text}"`;
-                          setAiInput(journalPrompt);
-                        });
-                      }, 300);
-                    }}
-                    style={{
-                      display: "flex", alignItems: "center", gap: "10px",
-                      padding: "12px", borderRadius: "8px", cursor: "pointer",
-                      background: "rgba(147,220,255,0.04)", border: "1px solid rgba(147,220,255,0.15)",
-                      marginBottom: "10px",
-                    }}>
-                    <div style={{
-                      width: "36px", height: "36px", borderRadius: "10px",
-                      background: "rgba(147,220,255,0.08)", border: "1px solid rgba(147,220,255,0.2)",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                    }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(147,220,255,0.8)" strokeWidth="1.5">
-                        <rect x="9" y="2" width="6" height="11" rx="3"/>
-                        <path d="M5 10a7 7 0 0 0 14 0"/>
-                        <line x1="12" y1="17" x2="12" y2="22"/>
-                      </svg>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: "12px", color: "rgba(147,220,255,0.9)", fontFamily: "'Cinzel', serif", fontWeight: 600 }}>Voice Journal</div>
-                      <div style={{ fontSize: "9px", color: "#6b5d4a" }}>Speak your thoughts · Navi will organize them</div>
-                    </div>
-                  </div>
-
-                  {/* New Entry button */}
-                  <div
-                    onClick={() => {
-                      if (alreadySaved) {
-                        setJournalDraft({ ...todayEntry });
-                        setJournalStep(3);
-                      } else {
-                        setJournalDraft({ amazing: "", learned: "", grateful: "" });
-                        setJournalStep(0);
-                      }
-                      setJournalView("new");
-                    }}
-                    style={{
-                      padding: "16px", marginBottom: "8px", borderRadius: "8px", cursor: "pointer",
-                      background: "linear-gradient(145deg, rgba(245,158,11,0.08), rgba(245,158,11,0.02))",
-                      border: "1px solid rgba(245,158,11,0.2)",
-                      display: "flex", alignItems: "center", gap: "12px",
-                      transition: "border-color 0.2s",
-                    }}
-                  >
-                    <QuillIcon size={20} color="#f5c842" />
-                    <div>
-                      <div style={{ fontSize: "14px", color: "#f5c842", fontFamily: "'Cinzel', serif", letterSpacing: "1px" }}>
-                        {alreadySaved ? "View Today's Entry" : "New Entry"}
-                      </div>
-                      <div style={{ fontSize: "11px", color: "#8a7a65", marginTop: "2px" }}>
-                        {alreadySaved ? "Review or edit your journal" : "Answer today's three questions"}
-                      </div>
-                    </div>
-                    <ChevronIcon size={12} color="#5a4f40" open={false} />
-                  </div>
-
-                  {/* Previous Entries button */}
-                  <div
-                    onClick={() => setJournalView("history")}
-                    style={{
-                      padding: "16px", borderRadius: "8px", cursor: "pointer",
-                      background: "rgba(0,0,0,0.2)",
-                      border: "1px solid rgba(245,158,11,0.08)",
-                      display: "flex", alignItems: "center", gap: "12px",
-                      transition: "border-color 0.2s",
-                    }}
-                  >
-                    <BookIcon size={20} color="#8a7a65" />
-                    <div>
-                      <div style={{ fontSize: "14px", color: "#c4a882", fontFamily: "'Cinzel', serif", letterSpacing: "1px" }}>
-                        Previous Entries
-                      </div>
-                      <div style={{ fontSize: "11px", color: "#6b5d4a", marginTop: "2px" }}>
-                        {allDates.length} {allDates.length === 1 ? "entry" : "entries"} recorded
-                      </div>
-                    </div>
-                    <ChevronIcon size={12} color="#5a4f40" open={false} />
-                  </div>
-
-                  {dailyFlipped && dailyCard && (
-                    <div style={{ textAlign: "center", padding: "14px 8px", marginTop: "8px", borderTop: "1px solid rgba(245,158,11,0.08)" }}>
-                      <div style={{ fontSize: "15px", color: "#e8d5b5", fontFamily: "Crimson Text, serif", fontStyle: "italic", lineHeight: 1.6 }}>"{dailyCard.quote}"</div>
-                      <div style={{ fontSize: "9px", color: "#5a4f40", fontFamily: "Cinzel, serif", letterSpacing: "1.5px", marginTop: "10px", textTransform: "uppercase" }}>{dailyCard.category}</div>
-                    </div>
-                  )}
-                </Panel>
-              )}
-
-              {/* ─── NEW ENTRY VIEW ─── */}
-              {journalView === "new" && (
-                <Panel>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-                    <div onClick={() => { setJournalView("menu"); setJournalStep(0); }}
-                      style={{ cursor: "pointer", padding: "4px", transform: "rotate(180deg)" }}>
-                      <ChevronIcon size={12} color="#8a7a65" open={false} />
-                    </div>
-                    <SectionHeader icon={<QuillIcon />} title={alreadySaved ? "Today's Entry" : "New Entry"} subtitle={today} />
-                  </div>
-
-                  {/* Progress dots */}
-                  <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginBottom: "16px" }}>
-                    {PROMPTS.map((p, i) => (
-                      <div key={i} style={{
-                        width: "8px", height: "8px", borderRadius: "50%",
-                        background: i < journalStep ? "#f59e0b" : i === journalStep && journalStep < 3 ? "rgba(245,158,11,0.5)" : "rgba(245,158,11,0.15)",
-                        border: i === journalStep && journalStep < 3 ? "1px solid #f59e0b" : "1px solid transparent",
-                        transition: "all 0.3s",
-                      }} />
-                    ))}
-                  </div>
-
-                  {journalStep < 3 ? (
-                    <div key={journalStep} style={{ animation: "fadeSlideDown 0.3s ease" }}>
-                      {/* Question */}
-                      <div style={{
-                        display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px",
-                        justifyContent: "center",
-                      }}>
-                        {currentPrompt.icon}
-                        <span style={{
-                          fontSize: "13px", color: "#f5c842", fontFamily: "'Cinzel', serif",
-                          letterSpacing: "1px", textAlign: "center",
-                        }}>{currentPrompt.label}</span>
-                        <button onClick={() => speak(currentPrompt.label)} style={{
-                          background: "none", border: "1px solid rgba(245,158,11,0.15)", borderRadius: "4px",
-                          padding: "3px 6px", cursor: "pointer", display: "flex", alignItems: "center",
-                        }}><SpeakerIcon size={11} color="#8a7a65" /></button>
-                      </div>
-
-                      {/* Answer textarea */}
-                      <textarea
-                        value={journalDraft[currentPrompt.key] || ""}
-                        onChange={e => setJournalDraft(prev => ({ ...prev, [currentPrompt.key]: e.target.value }))}
-                        placeholder="Write your answer..."
-                        autoFocus
-                        style={{
-                          width: "100%", background: "rgba(0,0,0,0.4)", border: "1px solid rgba(245,158,11,0.2)",
-                          borderRadius: "6px", color: "#e8d5b5", padding: "12px", fontSize: "16px",
-                          fontFamily: "'Crimson Text', serif", resize: "vertical", minHeight: "80px",
-                          outline: "none", boxSizing: "border-box",
-                        }}
-                      />
-
-                      {/* Navigation */}
-                      <div style={{ display: "flex", gap: "8px", marginTop: "12px" }}>
-                        {journalStep > 0 && (
-                          <button onClick={() => setJournalStep(s => s - 1)} style={{
-                            padding: "8px 16px", background: "rgba(0,0,0,0.3)",
-                            border: "1px solid rgba(255,255,255,0.1)", borderRadius: "6px", color: "#8a7a65",
-                            fontFamily: "'Cinzel', serif", fontSize: "11px", cursor: "pointer", letterSpacing: "1px",
-                          }}>BACK</button>
-                        )}
-                        <button onClick={() => {
-                          if (journalDraft[currentPrompt.key]?.trim()) setJournalStep(s => s + 1);
-                        }} style={{
-                          flex: 1, padding: "10px", borderRadius: "6px", cursor: "pointer",
-                          fontFamily: "'Cinzel', serif", fontSize: "11px", letterSpacing: "1px",
-                          background: journalDraft[currentPrompt.key]?.trim()
-                            ? "linear-gradient(145deg, rgba(245,158,11,0.3), rgba(245,158,11,0.1))"
-                            : "rgba(0,0,0,0.2)",
-                          border: journalDraft[currentPrompt.key]?.trim()
-                            ? "1px solid rgba(245,158,11,0.4)"
-                            : "1px solid rgba(255,255,255,0.05)",
-                          color: journalDraft[currentPrompt.key]?.trim() ? "#f5c842" : "#5a4f40",
-                        }}>
-                          {journalStep < 2 ? "NEXT" : "REVIEW"}
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    /* Review & Save */
-                    <div style={{ animation: "fadeSlideDown 0.3s ease" }}>
-                      <div style={{
-                        fontSize: "10px", color: "#8a7a65", fontFamily: "'Cinzel', serif",
-                        letterSpacing: "2px", textTransform: "uppercase", textAlign: "center", marginBottom: "12px",
-                      }}>{alreadySaved ? "YOUR ENTRY" : "REVIEW YOUR ENTRY"}</div>
-                      {PROMPTS.map((p, i) => (
-                        <div key={p.key} style={{
-                          marginBottom: "10px", padding: "8px",
-                          background: "rgba(0,0,0,0.2)", borderRadius: "6px",
-                          cursor: "pointer", border: "1px solid rgba(245,158,11,0.06)",
-                        }} onClick={() => setJournalStep(i)}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "3px" }}>
-                            {p.icon}
-                            <span style={{ fontSize: "9px", color: "#8a7a65", fontFamily: "'Cinzel', serif", letterSpacing: "1px" }}>
-                              {p.label}
-                            </span>
-                          </div>
-                          <div style={{
-                            fontSize: "12px", color: "#c4a882", paddingLeft: "20px",
-                            fontStyle: "italic", lineHeight: 1.4,
-                          }}>{journalDraft[p.key]}</div>
-                        </div>
-                      ))}
-                      <div style={{ display: "flex", gap: "8px", marginTop: "14px" }}>
-                        <button onClick={() => setJournalStep(2)} style={{
-                          padding: "8px 16px", background: "rgba(0,0,0,0.3)",
-                          border: "1px solid rgba(255,255,255,0.1)", borderRadius: "6px", color: "#8a7a65",
-                          fontFamily: "'Cinzel', serif", fontSize: "11px", cursor: "pointer", letterSpacing: "1px",
-                        }}>BACK</button>
-                        {allAnswered && (
-                          <button onClick={async () => {
-                            await saveJournal(today, { ...journalDraft });
-                            setJournalStep(0);
-                            setJournalDraft({ amazing: "", learned: "", grateful: "" });
-                            setJournalView("menu");
-                          }} style={{
-                            flex: 1, padding: "10px",
-                            background: "linear-gradient(145deg, rgba(245,158,11,0.3), rgba(245,158,11,0.1))",
-                            border: "1px solid rgba(245,158,11,0.4)", borderRadius: "6px", color: "#f5c842",
-                            fontFamily: "'Cinzel', serif", fontSize: "12px", cursor: "pointer", letterSpacing: "1px",
-                          }}>✦ SAVE ENTRY ✦</button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </Panel>
-              )}
-
-              {/* ─── HISTORY VIEW ─── */}
-              {journalView === "history" && (
-                <Panel>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-                    <div onClick={() => setJournalView("menu")}
-                      style={{ cursor: "pointer", padding: "4px", transform: "rotate(180deg)" }}>
-                      <ChevronIcon size={12} color="#8a7a65" open={false} />
-                    </div>
-                    <SectionHeader icon={<BookIcon />} title="Previous Entries" subtitle={`${allDates.length} entries`} />
-                  </div>
-
-                  {allDates.length === 0 ? (
-                    <div style={{
-                      textAlign: "center", padding: "30px 10px", color: "#5a4f40",
-                      fontStyle: "italic", fontSize: "13px",
-                    }}>No entries yet. Start writing today.</div>
-                  ) : (
-                    allDates.map(date => {
-                      const entry = journalEntries[date];
-                      return (
-                        <div key={date} style={{
-                          padding: "10px 0", borderBottom: "1px solid rgba(245,158,11,0.06)",
-                        }}>
-                          <div style={{
-                            fontSize: "10px", color: "#f59e0b", fontFamily: "'Cinzel', serif",
-                            letterSpacing: "1px", marginBottom: "6px",
-                          }}>{date}</div>
-                          {entry.amazing && <div style={{ fontSize: "12px", color: "#c4a882", marginBottom: "4px", lineHeight: 1.4 }}>
-                            <SparkleIcon size={9} color="#8a7a65" /> {entry.amazing}
-                          </div>}
-                          {entry.learned && <div style={{ fontSize: "12px", color: "#c4a882", marginBottom: "4px", lineHeight: 1.4 }}>
-                            <BookIcon size={9} /> {entry.learned}
-                          </div>}
-                          {entry.grateful && <div style={{ fontSize: "12px", color: "#c4a882", lineHeight: 1.4 }}>
-                            <HeartIcon size={9} /> {entry.grateful}
-                          </div>}
-                        </div>
-                      );
-                    })
-                  )}
-                </Panel>
-              )}
-            </div>
-          );
-        })()}
 
         {/* ═══ SKILLS TAB ═══ */}
         {activeTab === "skills" && (() => {
@@ -6335,159 +5789,50 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
       )}
 
 
-      {/* ═══ AI COMMAND PANEL ═══ */}
-      {aiOpen && (
-        <div style={{
-          position: "fixed", bottom: "calc(76px + env(safe-area-inset-bottom, 0px))", left: "8px", right: "8px",
-          zIndex: 200, maxHeight: "55vh",
-          background: "linear-gradient(180deg, rgba(20,16,10,0.98), rgba(10,8,5,0.99))",
-          border: "1px solid rgba(245,158,11,0.2)",
-          borderRadius: "16px",
-          boxShadow: "0 -8px 40px rgba(0,0,0,0.6), 0 0 60px rgba(245,158,11,0.05)",
-          backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
-          display: "flex", flexDirection: "column",
-          overflow: "hidden",
+      {/* ═══ NAVI SPEECH BUBBLE ═══ */}
+      {naviMessage && (
+        <div onClick={() => setNaviMessage(null)} style={{
+          position: "fixed", bottom: "calc(138px + env(safe-area-inset-bottom, 0px))", right: "16px", zIndex: 151,
+          maxWidth: "260px", padding: "10px 14px",
+          background: "linear-gradient(145deg, rgba(20,16,10,0.95), rgba(10,8,5,0.98))",
+          border: "1px solid rgba(147,220,255,0.25)",
+          borderRadius: "14px 14px 4px 14px",
+          boxShadow: "0 4px 20px rgba(0,0,0,0.5), 0 0 20px rgba(147,220,255,0.08)",
+          backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)",
+          animation: "fadeSlideDown 0.3s ease",
+          cursor: "pointer",
         }}>
-          {/* Header */}
           <div style={{
-            padding: "12px 16px 8px", display: "flex", alignItems: "center", justifyContent: "space-between",
-            borderBottom: "1px solid rgba(245,158,11,0.1)",
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f5c842" strokeWidth="1.5"><path d="M12 2a4 4 0 0 1 4 4v2a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z"/><path d="M5 12a7 7 0 0 0 14 0"/><path d="M12 19v3M8 22h8"/></svg>
-              <span style={{ fontSize: "12px", color: "#f5c842", fontFamily: "'Cinzel', serif", letterSpacing: "1px" }}>AI COMMAND</span>
-            </div>
-            <div onClick={() => setAiOpen(false)} style={{ cursor: "pointer", padding: "4px" }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8a7a65" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
-            </div>
-          </div>
-
-          {/* Messages */}
-          <div ref={aiScrollRef} style={{
-            flex: 1, overflowY: "auto", padding: "12px 16px",
-            display: "flex", flexDirection: "column", gap: "10px",
-            minHeight: "100px", maxHeight: "35vh",
-          }}>
-            {aiMessages.length === 0 && (
-              <div style={{ textAlign: "center", padding: "20px 0" }}>
-                <div style={{ fontSize: "11px", color: "#5a4f40", fontFamily: "'Cinzel', serif", marginBottom: "8px" }}>What can I help with?</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", justifyContent: "center" }}>
-                  {[
-                    "How am I tracking this week?",
-                    "What should I focus on today?",
-                    "Which skills am I neglecting?",
-                    "New quest: ...",
-                    "Add item: ...",
-                    "Give me a challenge",
-                  ].map(s => (
-                    <div key={s} onClick={() => { setAiInput(s.endsWith("...") ? s : s); if (!s.endsWith("...")) sendAiMessage(); }}
-                      style={{
-                        padding: "5px 10px", borderRadius: "12px", fontSize: "9px",
-                        background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.15)",
-                        color: "#c4a882", fontFamily: "'Cinzel', serif", cursor: "pointer",
-                      }}>{s}</div>
-                  ))}
-                </div>
-              </div>
-            )}
-            {aiMessages.map((msg, i) => (
-              <div key={i} style={{
-                alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
-                maxWidth: "85%",
-                padding: "8px 12px", borderRadius: msg.role === "user" ? "12px 12px 2px 12px" : "12px 12px 12px 2px",
-                background: msg.role === "user" ? "rgba(245,158,11,0.12)" : "rgba(255,255,255,0.04)",
-                border: `1px solid ${msg.role === "user" ? "rgba(245,158,11,0.2)" : "rgba(255,255,255,0.06)"}`,
-              }}>
-                <div style={{
-                  fontSize: "11px", color: msg.role === "user" ? "#e8d5b5" : "#c4a882",
-                  fontFamily: "'Crimson Text', serif", lineHeight: 1.5, whiteSpace: "pre-wrap",
-                }}>{msg.text}</div>
-              </div>
-            ))}
-            {aiLoading && (
-              <div style={{ alignSelf: "flex-start", padding: "8px 12px" }}>
-                <div style={{ fontSize: "11px", color: "#5a4f40", fontStyle: "italic" }}>Thinking...</div>
-              </div>
-            )}
-          </div>
-
-          {/* Input */}
+            fontSize: "12px", color: "rgba(147,220,255,0.9)", fontFamily: "'Crimson Text', serif",
+            lineHeight: 1.5, fontStyle: "italic",
+          }}>{naviMessage}</div>
           <div style={{
-            padding: "8px 12px 10px", display: "flex", gap: "8px", alignItems: "center",
-            borderTop: "1px solid rgba(245,158,11,0.1)",
-          }}>
-            <input
-              ref={aiInputRef}
-              value={aiInput}
-              onChange={(e) => setAiInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendAiMessage(); } }}
-              placeholder="Command your world..."
-              style={{
-                flex: 1, padding: "10px 14px", fontSize: "13px",
-                background: "rgba(0,0,0,0.4)", border: "1px solid rgba(245,158,11,0.15)",
-                borderRadius: "12px", color: "#e8d5b5", outline: "none",
-                fontFamily: "'Crimson Text', serif",
-              }}
-            />
-            {/* Mic button */}
-            <div onClick={() => {
-              if (isListening) { stopListening(); } 
-              else { startListening((text) => { setAiInput(text); }); }
-            }} style={{
-              width: "38px", height: "38px", borderRadius: "12px",
-              background: isListening ? "rgba(239,68,68,0.2)" : "rgba(0,0,0,0.3)",
-              border: `1px solid ${isListening ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.06)"}`,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              cursor: "pointer", transition: "all 0.2s", flexShrink: 0,
-              animation: isListening ? "micPulse 1.5s ease-in-out infinite" : undefined,
-            }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={isListening ? "#ef4444" : "#5a4f40"} strokeWidth="1.5">
-                <rect x="9" y="2" width="6" height="11" rx="3"/>
-                <path d="M5 10a7 7 0 0 0 14 0"/>
-                <line x1="12" y1="17" x2="12" y2="22"/>
-                <line x1="8" y1="22" x2="16" y2="22"/>
-              </svg>
-            </div>
-            {/* Send button */}
-            <div onClick={() => { if (isListening) stopListening(); sendAiMessage(); }} style={{
-              width: "38px", height: "38px", borderRadius: "12px",
-              background: aiInput.trim() ? "rgba(245,158,11,0.2)" : "rgba(0,0,0,0.3)",
-              border: `1px solid ${aiInput.trim() ? "rgba(245,158,11,0.4)" : "rgba(255,255,255,0.06)"}`,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              cursor: "pointer", transition: "all 0.2s", flexShrink: 0,
-            }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={aiInput.trim() ? "#f5c842" : "#5a4f40"} strokeWidth="2">
-                <path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/>
-              </svg>
-            </div>
-          </div>
+            fontSize: "8px", color: "#5a4f40", fontFamily: "'Cinzel', serif",
+            letterSpacing: "1px", marginTop: "4px", textAlign: "right",
+          }}>— Navi</div>
         </div>
       )}
 
-      {/* Floating AI Fairy Button */}
-      <div onClick={() => { setAiOpen(!aiOpen); if (!aiOpen) setTimeout(() => aiInputRef.current?.focus(), 100); }} style={{
+      {/* Floating Navi Fairy Button */}
+      <div onClick={showNaviMessage} style={{
         position: "fixed", bottom: "calc(82px + env(safe-area-inset-bottom, 0px))", right: "16px", zIndex: 150,
         width: "48px", height: "48px", borderRadius: "50%",
-        background: aiOpen ? "rgba(147,220,255,0.12)" : "rgba(10,8,6,0.7)",
-        border: `1px solid ${aiOpen ? "rgba(147,220,255,0.35)" : "rgba(147,220,255,0.15)"}`,
-        boxShadow: aiOpen ? "0 0 25px rgba(147,220,255,0.2), 0 0 50px rgba(147,220,255,0.08)" : "0 4px 20px rgba(0,0,0,0.5), 0 0 20px rgba(147,220,255,0.06)",
+        background: "rgba(10,8,6,0.7)",
+        border: "1px solid rgba(147,220,255,0.15)",
+        boxShadow: "0 4px 20px rgba(0,0,0,0.5), 0 0 20px rgba(147,220,255,0.06)",
         display: "flex", alignItems: "center", justifyContent: "center",
         cursor: "pointer", transition: "all 0.3s",
         backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)",
-        animation: aiOpen ? undefined : "fairyBob 3s ease-in-out infinite",
+        animation: "fairyBob 3s ease-in-out infinite",
       }}>
-        {aiOpen ? (
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(147,220,255,0.8)" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
-        ) : (
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" style={{ animation: "fairyGlow 2s ease-in-out infinite" }}>
-            <circle cx="12" cy="12" r="2" fill="rgba(180,230,255,0.9)"/>
-            <circle cx="12" cy="12" r="4" fill="none" stroke="rgba(147,220,255,0.2)" strokeWidth="0.5"/>
-            <path d="M10 12 Q5 8 7 4 Q9 8 10 12" fill="rgba(147,220,255,0.15)" stroke="rgba(147,220,255,0.5)" strokeWidth="0.7"/>
-            <path d="M14 12 Q19 8 17 4 Q15 8 14 12" fill="rgba(147,220,255,0.15)" stroke="rgba(147,220,255,0.5)" strokeWidth="0.7"/>
-            <path d="M10 12 Q5 16 7 20 Q9 16 10 12" fill="rgba(147,220,255,0.08)" stroke="rgba(147,220,255,0.3)" strokeWidth="0.5"/>
-            <path d="M14 12 Q19 16 17 20 Q15 16 14 12" fill="rgba(147,220,255,0.08)" stroke="rgba(147,220,255,0.3)" strokeWidth="0.5"/>
-          </svg>
-        )}
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" style={{ animation: "fairyGlow 2s ease-in-out infinite" }}>
+          <circle cx="12" cy="12" r="2" fill="rgba(180,230,255,0.9)"/>
+          <circle cx="12" cy="12" r="4" fill="none" stroke="rgba(147,220,255,0.2)" strokeWidth="0.5"/>
+          <path d="M10 12 Q5 8 7 4 Q9 8 10 12" fill="rgba(147,220,255,0.15)" stroke="rgba(147,220,255,0.5)" strokeWidth="0.7"/>
+          <path d="M14 12 Q19 8 17 4 Q15 8 14 12" fill="rgba(147,220,255,0.15)" stroke="rgba(147,220,255,0.5)" strokeWidth="0.7"/>
+          <path d="M10 12 Q5 16 7 20 Q9 16 10 12" fill="rgba(147,220,255,0.08)" stroke="rgba(147,220,255,0.3)" strokeWidth="0.5"/>
+          <path d="M14 12 Q19 16 17 20 Q15 16 14 12" fill="rgba(147,220,255,0.08)" stroke="rgba(147,220,255,0.3)" strokeWidth="0.5"/>
+        </svg>
       </div>
 
       
@@ -6774,9 +6119,9 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
       `}</style>
     </div>
 
-    {/* ═══ SETTINGS PANEL — outside overflow:hidden container ═══ */}
-    {showSettings && (
-      <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', justifyContent: 'center', alignItems: 'center', fontFamily: "'Crimson Text', serif" }}>
+    {/* ═══ SETTINGS PANEL — rendered via portal to bypass all overflow/stacking issues ═══ */}
+    {showSettings && ReactDOM.createPortal(
+      <div style={{ position: 'fixed', inset: 0, zIndex: 9998, display: 'flex', justifyContent: 'center', alignItems: 'center', fontFamily: "'Crimson Text', serif" }}>
         {/* Backdrop */}
         <div onClick={() => setShowSettings(false)} style={{
           position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)',
@@ -6828,70 +6173,6 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
             ) : null; })()}
           </div>
 
-          {/* ── API Key ── */}
-          <div style={{ marginBottom: '20px' }}>
-            <div style={{ fontSize: '11px', color: '#8a7a65', letterSpacing: '2px', fontFamily: "'Cinzel', serif", marginBottom: '10px', textTransform: 'uppercase' }}>Navi Connection</div>
-            {apiKeyLocked ? (
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                  <div style={{
-                    flex: 1, padding: '10px 14px', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)',
-                    borderRadius: '10px', color: '#4ade80', fontSize: '12px', fontFamily: "'Fira Code', monospace",
-                  }}>API Key Connected</div>
-                  <button onClick={() => { setApiKeyLocked(false); setApiKey(""); localStorage.removeItem("rpg-api-key"); setApiTestResult(null); }} style={{
-                    padding: '10px 14px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)',
-                    borderRadius: '10px', color: '#f87171', fontSize: '11px', fontFamily: "'Cinzel', serif",
-                    cursor: 'pointer', whiteSpace: 'nowrap',
-                  }}>Remove</button>
-                </div>
-                <button onClick={testApiConnection} disabled={apiTesting} style={{
-                  width: '100%', padding: '8px', background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)',
-                  borderRadius: '10px', color: '#a5b4fc', fontSize: '11px', fontFamily: "'Cinzel', serif",
-                  cursor: apiTesting ? 'wait' : 'pointer', letterSpacing: '1px', transition: 'all 0.2s',
-                }}>{apiTesting ? "Testing..." : "Test Connection"}</button>
-                {apiTestResult && (
-                  <div style={{
-                    marginTop: '6px', padding: '8px 12px', borderRadius: '8px', fontSize: '11px', lineHeight: 1.4,
-                    background: apiTestResult.ok ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
-                    border: '1px solid ' + (apiTestResult.ok ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'),
-                    color: apiTestResult.ok ? '#4ade80' : '#f87171',
-                    fontFamily: "'Fira Code', monospace", wordBreak: 'break-word',
-                  }}>{apiTestResult.msg}</div>
-                )}
-              </div>
-            ) : (
-              <div>
-                <input
-                  type="password"
-                  placeholder="sk-ant-... (Anthropic API Key)"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  style={{
-                    width: '100%', padding: '10px 14px', background: 'rgba(0,0,0,0.4)',
-                    border: '1px solid rgba(245,158,11,0.2)', borderRadius: '10px',
-                    color: '#e8d5b0', fontSize: '12px', fontFamily: "'Fira Code', monospace",
-                    outline: 'none', marginBottom: '8px',
-                  }}
-                />
-                <button onClick={() => {
-                  if (apiKey.trim()) {
-                    localStorage.setItem("rpg-api-key", apiKey.trim());
-                    setApiKeyLocked(true);
-                  }
-                }} style={{
-                  width: '100%', padding: '10px', background: apiKey.trim() ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.05)',
-                  border: '1px solid ' + (apiKey.trim() ? 'rgba(245,158,11,0.4)' : 'rgba(255,255,255,0.1)'),
-                  borderRadius: '10px', color: apiKey.trim() ? '#f5c842' : '#555',
-                  fontFamily: "'Cinzel', serif", fontSize: '13px', cursor: apiKey.trim() ? 'pointer' : 'default',
-                  letterSpacing: '1px', transition: 'all 0.2s',
-                }}>Connect</button>
-                <div style={{ fontSize: '10px', color: '#5a4a35', marginTop: '6px', lineHeight: 1.4 }}>
-                  Your key is stored locally on this device only. Get one at console.anthropic.com
-                </div>
-              </div>
-            )}
-          </div>
-
           {/* ── Brightness ── */}
           <div style={{ marginBottom: '20px' }}>
             <div style={{ fontSize: '11px', color: '#8a7a65', letterSpacing: '2px', fontFamily: "'Cinzel', serif", marginBottom: '10px', textTransform: 'uppercase' }}>
@@ -6904,29 +6185,9 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
             />
           </div>
 
-          {/* ── Theme (placeholder) ── */}
-          <div style={{ marginBottom: '8px' }}>
-            <div style={{ fontSize: '11px', color: '#8a7a65', letterSpacing: '2px', fontFamily: "'Cinzel', serif", marginBottom: '10px', textTransform: 'uppercase' }}>App Theme</div>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              {[
-                { id: 'dark-fantasy', label: 'Dark Fantasy', color: '#f59e0b' },
-                { id: 'midnight', label: 'Midnight', color: '#6366f1' },
-                { id: 'blood-moon', label: 'Blood Moon', color: '#ef4444' },
-                { id: 'forest', label: 'Forest', color: '#22c55e' },
-              ].map(t => (
-                <button key={t.id} onClick={() => setAppTheme(t.id)} style={{
-                  flex: '1 1 45%', padding: '10px 8px', background: appTheme === t.id ? `rgba(${t.id === 'dark-fantasy' ? '245,158,11' : t.id === 'midnight' ? '99,102,241' : t.id === 'blood-moon' ? '239,68,68' : '34,197,94'},0.15)` : 'rgba(0,0,0,0.3)',
-                  border: `1px solid ${appTheme === t.id ? t.color : 'rgba(255,255,255,0.08)'}`,
-                  borderRadius: '10px', color: appTheme === t.id ? t.color : '#5a4a35',
-                  fontFamily: "'Cinzel', serif", fontSize: '11px', cursor: 'pointer',
-                  transition: 'all 0.2s', letterSpacing: '0.5px',
-                }}>{t.label}</button>
-              ))}
-            </div>
-            <div style={{ fontSize: '10px', color: '#5a4a35', marginTop: '6px' }}>More themes coming soon</div>
-          </div>
         </div>
-      </div>
+      </div>,
+      document.body
     )}
     </>
   );
