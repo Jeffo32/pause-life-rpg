@@ -2742,8 +2742,8 @@ function App() {
     } catch {}
   }, [getAudioCtx, playNote]);
 
-  // ── Sound File Playback ──
-  const soundCacheRef = useRef({});
+  // ── Sound File Playback (Web Audio API — won't steal audio focus from Spotify etc.) ──
+  const soundCacheRef = useRef({});  // path -> AudioBuffer
   const ALL_SOUND_PATHS = [
     "Sounds/OOT_Navi_Hello1.wav", "Sounds/OOT_Navi_Hello2.wav", "Sounds/OOT_Navi_Hello3.wav",
     "Sounds/OOT_Navi_Hello4.wav", "Sounds/OOT_Navi_Hello5.wav",
@@ -2752,34 +2752,48 @@ function App() {
     "Sounds/OOT_Navi_Listen1.wav", "Sounds/OOT_Navi_Listen2.wav", "Sounds/OOT_Navi_Listen3.wav",
     "Sounds/OOT_Navi_Listen4.wav", "Sounds/OOT_Navi_Listen5.wav",
     "Sounds/OOT_PauseMenu_Open.wav", "Sounds/OOT_PauseMenu_Close.wav",
-    "Sounds/OOT_xp_collected.wav", "Sounds/OOT_Selection.wav",
+    "Sounds/OOT_xp_collected.wav", "Sounds/OOT_Selection.wav", "Sounds/OOT_NAV.wav",
   ];
 
-  // Preload all sounds on mount for instant playback
+  // Preload all sounds as AudioBuffers on mount
   useEffect(() => {
+    const ctx = getAudioCtx();
     ALL_SOUND_PATHS.forEach(path => {
       if (!soundCacheRef.current[path]) {
-        const a = new Audio(path);
-        a.preload = "auto";
-        a.load();
-        soundCacheRef.current[path] = a;
+        fetch(path)
+          .then(r => r.arrayBuffer())
+          .then(buf => ctx.decodeAudioData(buf))
+          .then(decoded => { soundCacheRef.current[path] = decoded; })
+          .catch(() => {});
       }
     });
-  }, []);
+  }, [getAudioCtx]);
 
   const playSound = useCallback((path) => {
     try {
-      if (!soundCacheRef.current[path]) {
-        const a = new Audio(path);
-        a.preload = "auto";
-        a.load();
-        soundCacheRef.current[path] = a;
+      const ctx = getAudioCtx();
+      const buffer = soundCacheRef.current[path];
+      if (buffer) {
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(ctx.destination);
+        source.start(0);
+      } else {
+        // Fallback: fetch and play immediately, cache for next time
+        fetch(path)
+          .then(r => r.arrayBuffer())
+          .then(buf => ctx.decodeAudioData(buf))
+          .then(decoded => {
+            soundCacheRef.current[path] = decoded;
+            const source = ctx.createBufferSource();
+            source.buffer = decoded;
+            source.connect(ctx.destination);
+            source.start(0);
+          })
+          .catch(() => {});
       }
-      const audio = soundCacheRef.current[path];
-      audio.currentTime = 0;
-      audio.play().catch(() => {});
     } catch {}
-  }, []);
+  }, [getAudioCtx]);
 
   const NAVI_SOUNDS = ALL_SOUND_PATHS.slice(0, 15);
 
@@ -2792,10 +2806,24 @@ function App() {
   const playMenuClose = useCallback(() => playSound("Sounds/OOT_PauseMenu_Close.wav"), [playSound]);
   const playXpCollected = useCallback(() => playSound("Sounds/OOT_xp_collected.wav"), [playSound]);
   const playSelection = useCallback(() => playSound("Sounds/OOT_Selection.wav"), [playSound]);
+  const playNav = useCallback(() => playSound("Sounds/OOT_NAV.wav"), [playSound]);
 
-  // ── Haptic Feedback ──
+  // ── Haptic Feedback (works on Android + iOS) ──
   const haptic = useCallback((duration = 10) => {
-    try { if (navigator.vibrate) navigator.vibrate(duration); } catch {}
+    try {
+      // Android vibration API
+      if (navigator.vibrate) { navigator.vibrate(duration); return; }
+      // iOS: trigger taptic engine via selection change on a hidden input
+      const el = document.createElement("input");
+      el.style.position = "fixed";
+      el.style.opacity = "0";
+      el.style.left = "-999px";
+      el.style.fontSize = "16px";
+      document.body.appendChild(el);
+      el.focus();
+      el.click();
+      el.remove();
+    } catch {}
   }, []);
 
   // ── XP Calculation ──
@@ -3408,7 +3436,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
         </div>
 
         {/* Spacer for fixed header */}
-        <div style={{ height: "calc(100px + env(safe-area-inset-top, 0px))" }} />
+        <div style={{ height: "calc(120px + env(safe-area-inset-top, 0px))" }} />
 
         {/* ═══ CHARACTER TAB ═══ */}
         {activeTab === "character" && (
@@ -5979,6 +6007,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
         {tabs.map(tab => (
           <button key={tab.id} onClick={() => {
             haptic(15);
+            playNav();
             if (tab.id === "character" && activeTab === "character") {
               setHeroExpanded(prev => !prev);
             } else {
