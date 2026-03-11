@@ -2808,22 +2808,9 @@ function App() {
   const playSelection = useCallback(() => playSound("Sounds/OOT_Selection.wav"), [playSound]);
   const playNav = useCallback(() => playSound("Sounds/OOT_NAV.wav"), [playSound]);
 
-  // ── Haptic Feedback (works on Android + iOS) ──
+  // ── Haptic Feedback ──
   const haptic = useCallback((duration = 10) => {
-    try {
-      // Android vibration API
-      if (navigator.vibrate) { navigator.vibrate(duration); return; }
-      // iOS: trigger taptic engine via selection change on a hidden input
-      const el = document.createElement("input");
-      el.style.position = "fixed";
-      el.style.opacity = "0";
-      el.style.left = "-999px";
-      el.style.fontSize = "16px";
-      document.body.appendChild(el);
-      el.focus();
-      el.click();
-      el.remove();
-    } catch {}
+    try { if (navigator.vibrate) navigator.vibrate(duration); } catch {}
   }, []);
 
   // ── XP Calculation ──
