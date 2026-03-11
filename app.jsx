@@ -2536,6 +2536,7 @@ function App() {
   }, []);
   const [expandedQuest, setExpandedQuest] = useState(null);
   const [collapsedCategories, setCollapsedCategories] = useState({});
+  const [mainQuestTab, setMainQuestTab] = useState("all");
   const [generatingSteps, setGeneratingSteps] = useState(false);
   const [questCompleteOverlay, setQuestCompleteOverlay] = useState(null);
   const [levelUpOverlay, setLevelUpOverlay] = useState(null);
@@ -4134,9 +4135,20 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
                 { key: "side", label: "Side Quests", icon: <PinIcon size={11} />, color: "#8a7a65" },
                 { key: "misc", label: "Miscellaneous", icon: <MiscIcon size={11} />, color: "#6b5d4a" },
               ].map(category => {
-                const filtered = quests.filter(q => q.type === category.key && q.status === "active");
-                if (filtered.length === 0) return null;
+                const allInCategory = quests.filter(q => q.type === category.key && q.status === "active");
+                if (allInCategory.length === 0) return null;
                 const isCollapsed = collapsedCategories[category.key];
+
+                // Sub-tab filtering for main quests
+                const mainSubTabs = [
+                  { key: "all", label: "All" },
+                  { key: "belvu", label: "Belvu / Ops" },
+                  { key: "tech", label: "Tech / Build" },
+                  { key: "self", label: "Self / Mission" },
+                ];
+                const filtered = category.key === "main" && mainQuestTab !== "all"
+                  ? allInCategory.filter(q => q.id.startsWith(mainQuestTab + "-"))
+                  : allInCategory;
 
                 return (
                   <div key={category.key} style={{ marginBottom: "8px" }}>
@@ -4160,6 +4172,36 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
                         fontSize: "9px", color: "#5a4f40", fontFamily: "'Fira Code', monospace",
                       }}>{filtered.length}</span>
                     </div>
+
+                    {/* Sub-tabs for Main Quests */}
+                    {category.key === "main" && !isCollapsed && (
+                      <div style={{
+                        display: "flex", gap: "0px", padding: "6px 4px 2px",
+                        borderBottom: "1px solid rgba(245,158,11,0.06)",
+                      }}>
+                        {mainSubTabs.map(tab => {
+                          const isActive = mainQuestTab === tab.key;
+                          return (
+                            <div
+                              key={tab.key}
+                              onClick={(e) => { e.stopPropagation(); setMainQuestTab(tab.key); }}
+                              style={{
+                                padding: "4px 10px",
+                                fontSize: "9px",
+                                fontFamily: "'Cinzel', serif",
+                                letterSpacing: "1.5px",
+                                textTransform: "uppercase",
+                                cursor: "pointer",
+                                color: isActive ? "#f5c842" : "#6b5d4a",
+                                borderBottom: isActive ? "2px solid #f59e0b" : "2px solid transparent",
+                                transition: "color 0.2s, border-color 0.2s",
+                                userSelect: "none",
+                              }}
+                            >{tab.label}</div>
+                          );
+                        })}
+                      </div>
+                    )}
 
                     {/* Quest List - smooth drawer */}
                     <div style={{
