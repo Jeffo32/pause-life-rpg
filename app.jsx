@@ -2758,41 +2758,14 @@ function App() {
     } catch {}
   }, [getAudioCtx, playNote]);
 
-  // ── Sound File Playback (HTML5 Audio) ──
+  // ── Sound File Playback (HTML5 Audio — lazy creation on user gesture for iOS) ──
   const soundCacheRef = useRef({});
-  const ALL_SOUND_PATHS = [
-    "Sounds/OOT_Navi_Hello1.wav", "Sounds/OOT_Navi_Hello2.wav", "Sounds/OOT_Navi_Hello3.wav",
-    "Sounds/OOT_Navi_Hello4.wav", "Sounds/OOT_Navi_Hello5.wav",
-    "Sounds/OOT_Navi_Hey1.wav", "Sounds/OOT_Navi_Hey2.wav", "Sounds/OOT_Navi_Hey3.wav",
-    "Sounds/OOT_Navi_Hey4.wav", "Sounds/OOT_Navi_Hey5.wav",
-    "Sounds/OOT_Navi_Listen1.wav", "Sounds/OOT_Navi_Listen2.wav", "Sounds/OOT_Navi_Listen3.wav",
-    "Sounds/OOT_Navi_Listen4.wav", "Sounds/OOT_Navi_Listen5.wav",
-    "Sounds/OOT_PauseMenu_Open.wav", "Sounds/OOT_PauseMenu_Close.wav",
-    "Sounds/OOT_xp_collected.wav", "Sounds/OOT_Selection.wav", "Sounds/OOT_NAV.wav",
-    "Sounds/OOT_select_quest.wav", "Sounds/OOT_open_drawer.wav", "Sounds/OOT_close_drawer.wav",
-    "Sounds/OOT_close_menu.wav",
-  ];
-
-  // Preload all sounds on mount for instant playback
-  useEffect(() => {
-    ALL_SOUND_PATHS.forEach(path => {
-      if (!soundCacheRef.current[path]) {
-        const a = new Audio(path);
-        a.preload = "auto";
-        a.load();
-        soundCacheRef.current[path] = a;
-      }
-    });
-  }, []);
 
   const playSound = useCallback((path) => {
     if (soundMuted) return;
     try {
       if (!soundCacheRef.current[path]) {
-        const a = new Audio(path);
-        a.preload = "auto";
-        a.load();
-        soundCacheRef.current[path] = a;
+        soundCacheRef.current[path] = new Audio(path);
       }
       const audio = soundCacheRef.current[path];
       audio.volume = soundVolume;
