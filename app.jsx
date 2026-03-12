@@ -2774,7 +2774,14 @@ function App() {
     } catch {}
   }, [soundMuted, soundVolume]);
 
-  const NAVI_SOUNDS = ALL_SOUND_PATHS.slice(0, 15);
+  const NAVI_SOUNDS = [
+    "Sounds/OOT_Navi_Hello1.wav", "Sounds/OOT_Navi_Hello2.wav", "Sounds/OOT_Navi_Hello3.wav",
+    "Sounds/OOT_Navi_Hello4.wav", "Sounds/OOT_Navi_Hello5.wav",
+    "Sounds/OOT_Navi_Hey1.wav", "Sounds/OOT_Navi_Hey2.wav", "Sounds/OOT_Navi_Hey3.wav",
+    "Sounds/OOT_Navi_Hey4.wav", "Sounds/OOT_Navi_Hey5.wav",
+    "Sounds/OOT_Navi_Listen1.wav", "Sounds/OOT_Navi_Listen2.wav", "Sounds/OOT_Navi_Listen3.wav",
+    "Sounds/OOT_Navi_Listen4.wav", "Sounds/OOT_Navi_Listen5.wav",
+  ];
 
   const playNaviSound = useCallback(() => {
     const sound = NAVI_SOUNDS[Math.floor(Math.random() * NAVI_SOUNDS.length)];
