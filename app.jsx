@@ -2527,14 +2527,27 @@ function App() {
     const saved = localStorage.getItem("rpg-brightness");
     return saved ? parseFloat(saved) : 1;
   });
+  const [soundVolume, setSoundVolume] = useState(() => {
+    const saved = localStorage.getItem("rpg-sound-volume");
+    return saved ? parseFloat(saved) : 0.7;
+  });
+  const [soundMuted, setSoundMuted] = useState(() => {
+    return localStorage.getItem("rpg-sound-muted") === "true";
+  });
   // Navi speech bubble
   const [naviMessage, setNaviMessage] = useState(null);
   const naviTimerRef = useRef(null);
 
-  // Persist brightness
+  // Persist brightness & sound settings
   useEffect(() => {
     localStorage.setItem("rpg-brightness", String(brightness));
   }, [brightness]);
+  useEffect(() => {
+    localStorage.setItem("rpg-sound-volume", String(soundVolume));
+  }, [soundVolume]);
+  useEffect(() => {
+    localStorage.setItem("rpg-sound-muted", String(soundMuted));
+  }, [soundMuted]);
 
   // Global drag management: scroll prevention, auto-scroll, ghost position, haptics, drop
   useEffect(() => {
@@ -2745,8 +2758,8 @@ function App() {
     } catch {}
   }, [getAudioCtx, playNote]);
 
-  // ── Sound File Playback (Web Audio API — won't steal audio focus from Spotify etc.) ──
-  const soundCacheRef = useRef({});  // path -> AudioBuffer
+  // ── Sound File Playback (HTML5 Audio) ──
+  const soundCacheRef = useRef({});
   const ALL_SOUND_PATHS = [
     "Sounds/OOT_Navi_Hello1.wav", "Sounds/OOT_Navi_Hello2.wav", "Sounds/OOT_Navi_Hello3.wav",
     "Sounds/OOT_Navi_Hello4.wav", "Sounds/OOT_Navi_Hello5.wav",
@@ -2760,45 +2773,33 @@ function App() {
     "Sounds/OOT_close_menu.wav",
   ];
 
-  // Preload all sounds as AudioBuffers on mount
+  // Preload all sounds on mount for instant playback
   useEffect(() => {
-    const ctx = getAudioCtx();
     ALL_SOUND_PATHS.forEach(path => {
       if (!soundCacheRef.current[path]) {
-        fetch(path)
-          .then(r => r.arrayBuffer())
-          .then(buf => ctx.decodeAudioData(buf))
-          .then(decoded => { soundCacheRef.current[path] = decoded; })
-          .catch(() => {});
+        const a = new Audio(path);
+        a.preload = "auto";
+        a.load();
+        soundCacheRef.current[path] = a;
       }
     });
-  }, [getAudioCtx]);
+  }, []);
 
   const playSound = useCallback((path) => {
+    if (soundMuted) return;
     try {
-      const ctx = getAudioCtx();
-      const buffer = soundCacheRef.current[path];
-      if (buffer) {
-        const source = ctx.createBufferSource();
-        source.buffer = buffer;
-        source.connect(ctx.destination);
-        source.start(0);
-      } else {
-        // Fallback: fetch and play immediately, cache for next time
-        fetch(path)
-          .then(r => r.arrayBuffer())
-          .then(buf => ctx.decodeAudioData(buf))
-          .then(decoded => {
-            soundCacheRef.current[path] = decoded;
-            const source = ctx.createBufferSource();
-            source.buffer = decoded;
-            source.connect(ctx.destination);
-            source.start(0);
-          })
-          .catch(() => {});
+      if (!soundCacheRef.current[path]) {
+        const a = new Audio(path);
+        a.preload = "auto";
+        a.load();
+        soundCacheRef.current[path] = a;
       }
+      const audio = soundCacheRef.current[path];
+      audio.volume = soundVolume;
+      audio.currentTime = 0;
+      audio.play().catch(() => {});
     } catch {}
-  }, [getAudioCtx]);
+  }, [soundMuted, soundVolume]);
 
   const NAVI_SOUNDS = ALL_SOUND_PATHS.slice(0, 15);
 
@@ -6544,6 +6545,30 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
                 Last backup: {new Date(d).toLocaleString()}
               </div>
             ) : null; })()}
+          </div>
+
+          {/* ── Sound ── */}
+          <div style={{ marginBottom: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <div style={{ fontSize: '11px', color: '#8a7a65', letterSpacing: '2px', fontFamily: "'Cinzel', serif", textTransform: 'uppercase' }}>
+                Sound — {soundMuted ? 'OFF' : `${Math.round(soundVolume * 100)}%`}
+              </div>
+              <div
+                onClick={() => setSoundMuted(m => !m)}
+                style={{
+                  padding: '4px 12px', borderRadius: '6px', cursor: 'pointer',
+                  fontSize: '10px', fontFamily: "'Cinzel', serif", letterSpacing: '1px',
+                  background: soundMuted ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)',
+                  border: `1px solid ${soundMuted ? 'rgba(239,68,68,0.3)' : 'rgba(34,197,94,0.3)'}`,
+                  color: soundMuted ? '#ef4444' : '#4ade80',
+                }}
+              >{soundMuted ? 'MUTED' : 'ON'}</div>
+            </div>
+            <input
+              type="range" min="0" max="1" step="0.05" value={soundVolume}
+              onChange={(e) => { setSoundVolume(parseFloat(e.target.value)); if (soundMuted) setSoundMuted(false); }}
+              style={{ width: '100%', accentColor: '#f59e0b', opacity: soundMuted ? 0.4 : 1 }}
+            />
           </div>
 
           {/* ── Brightness ── */}
