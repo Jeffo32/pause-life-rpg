@@ -3339,6 +3339,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
       color: "#e8d5b5", fontFamily: "'Crimson Text', serif",
       position: "relative", overflow: "hidden",
       overscrollBehavior: "none", WebkitOverflowScrolling: "touch",
+      filter: `brightness(${brightness})`,
     }}>
       <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@400;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Fira+Code:wght@400&display=swap" rel="stylesheet" />
 
