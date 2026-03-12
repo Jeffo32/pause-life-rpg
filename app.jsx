@@ -2756,6 +2756,8 @@ function App() {
     "Sounds/OOT_Navi_Listen4.wav", "Sounds/OOT_Navi_Listen5.wav",
     "Sounds/OOT_PauseMenu_Open.wav", "Sounds/OOT_PauseMenu_Close.wav",
     "Sounds/OOT_xp_collected.wav", "Sounds/OOT_Selection.wav", "Sounds/OOT_NAV.wav",
+    "Sounds/OOT_select_quest.wav", "Sounds/OOT_open_drawer.wav", "Sounds/OOT_close_drawer.wav",
+    "Sounds/OOT_close_menu.wav",
   ];
 
   // Preload all sounds as AudioBuffers on mount
@@ -2810,6 +2812,10 @@ function App() {
   const playXpCollected = useCallback(() => playSound("Sounds/OOT_xp_collected.wav"), [playSound]);
   const playSelection = useCallback(() => playSound("Sounds/OOT_Selection.wav"), [playSound]);
   const playNav = useCallback(() => playSound("Sounds/OOT_NAV.wav"), [playSound]);
+  const playSelectQuest = useCallback(() => playSound("Sounds/OOT_select_quest.wav"), [playSound]);
+  const playOpenDrawer = useCallback(() => playSound("Sounds/OOT_open_drawer.wav"), [playSound]);
+  const playCloseDrawer = useCallback(() => playSound("Sounds/OOT_close_drawer.wav"), [playSound]);
+  const playCloseMenu = useCallback(() => playSound("Sounds/OOT_close_menu.wav"), [playSound]);
 
   // ── Haptic Feedback ──
   const haptic = useCallback((duration = 10) => {
@@ -3155,8 +3161,12 @@ function App() {
   }, []);
 
   const toggleCategory = useCallback((cat) => {
-    setCollapsedCategories(prev => ({ ...prev, [cat]: !prev[cat] }));
-  }, []);
+    setCollapsedCategories(prev => {
+      const wasCollapsed = prev[cat];
+      wasCollapsed ? playOpenDrawer() : playCloseDrawer();
+      return { ...prev, [cat]: !prev[cat] };
+    });
+  }, [playOpenDrawer, playCloseDrawer]);
 
   const toggleStep = useCallback(async (questId, stepIdx) => {
     const quest = quests.find(q => q.id === questId);
@@ -3859,7 +3869,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
                           return (
                             <div
                               key={tab.key}
-                              onClick={(e) => { e.stopPropagation(); setMainQuestTab(tab.key); }}
+                              onClick={(e) => { e.stopPropagation(); setMainQuestTab(tab.key); playSelectQuest(); }}
                               style={{
                                 padding: "4px 10px",
                                 fontSize: "9px",
@@ -3897,7 +3907,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
                             <div key={quest.id} style={{ borderBottom: "1px solid rgba(245,158,11,0.04)" }}>
                               {/* Quest Row - tap to expand */}
                               <div
-                                onClick={() => setExpandedQuest(isExpanded ? null : quest.id)}
+                                onClick={() => { setExpandedQuest(isExpanded ? null : quest.id); isExpanded ? playCloseDrawer() : playOpenDrawer(); }}
                                 style={{
                                   display: "flex", alignItems: "center", gap: "8px",
                                   padding: "10px 6px", cursor: "pointer", userSelect: "none",
@@ -5106,7 +5116,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
 
       {/* ═══ ITEM DETAIL POPUP ═══ */}
       {itemDetail && (
-        <div onClick={() => setItemDetail(null)} style={{
+        <div onClick={() => { setItemDetail(null); playCloseMenu(); }} style={{
           position: "fixed", inset: 0, zIndex: 2000,
           display: "flex", alignItems: "center", justifyContent: "center",
           background: "rgba(0,0,0,0.85)", backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)",
@@ -5142,7 +5152,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
                 background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)",
                 borderRadius: "6px", color: "#f59e0b", cursor: "pointer",
               }}>EDIT</button>
-              <button onClick={() => setItemDetail(null)} style={{
+              <button onClick={() => { setItemDetail(null); playCloseMenu(); }} style={{
                 flex: 1, padding: "8px", fontSize: "9px",
                 fontFamily: "'Cinzel', serif", letterSpacing: "1.5px",
                 background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
@@ -5212,7 +5222,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
           letterSpacing: "1px", textTransform: "uppercase", marginBottom: "3px", display: "block",
         };
         return (
-          <div onClick={() => setItemEditModal(null)} style={{
+          <div onClick={() => { setItemEditModal(null); playCloseMenu(); }} style={{
             position: "fixed", inset: 0, zIndex: 2000,
             display: "flex", alignItems: "center", justifyContent: "center",
             background: "rgba(0,0,0,0.85)", backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)",
@@ -5356,7 +5366,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
                     background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", color: "#ef4444",
                   }}>DELETE</button>
                 )}
-                <button onClick={() => setItemEditModal(null)} style={{
+                <button onClick={() => { setItemEditModal(null); playCloseMenu(); }} style={{
                   flex: 1, padding: "8px", fontSize: "9px", borderRadius: "6px", cursor: "pointer",
                   fontFamily: "'Cinzel', serif", letterSpacing: "1.5px",
                   background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "#8a7a65",
@@ -5415,7 +5425,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
         const cats = [src.primary, ...(src.secondary ? [src.secondary] : [])];
         const statVal = deriveStats(skills)[statKey];
         return (
-          <div onClick={(e) => { if (e.target === e.currentTarget) { setStatsExpanded(null); setStatCatOpen(null); setStatSkillOpen(null); } }} style={{
+          <div onClick={(e) => { if (e.target === e.currentTarget) { setStatsExpanded(null); setStatCatOpen(null); setStatSkillOpen(null); playCloseMenu(); } }} style={{
             position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 1000,
             display: "flex", alignItems: "center", justifyContent: "center", padding: "20px",
           }}>
@@ -5560,7 +5570,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
               })}
 
               {/* Close */}
-              <button onClick={() => { setStatsExpanded(null); setStatCatOpen(null); setStatSkillOpen(null); }} style={{
+              <button onClick={() => { setStatsExpanded(null); setStatCatOpen(null); setStatSkillOpen(null); playCloseMenu(); }} style={{
                 width: "100%", marginTop: "12px", padding: "10px", borderRadius: "8px",
                 background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.06)",
                 color: "#8a7a65", fontFamily: "'Cinzel', serif", fontSize: "12px", cursor: "pointer",
@@ -5792,7 +5802,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
       {/* Daily Card Overlay */}
       {showCardOverlay && dailyCard && (
         <div onClick={() => { if (!dailyFlipped) { revealDailyCard(); } }} style={{ position: "fixed", inset: 0, zIndex: 2500, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.92)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" }}>
-          <div onClick={(e) => { e.stopPropagation(); setShowCardOverlay(false); setCardCopied(false); }} style={{ position: "absolute", top: "16px", right: "16px", cursor: "pointer", width: "36px", height: "36px", borderRadius: "50%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div onClick={(e) => { e.stopPropagation(); setShowCardOverlay(false); setCardCopied(false); playCloseMenu(); }} style={{ position: "absolute", top: "16px", right: "16px", cursor: "pointer", width: "36px", height: "36px", borderRadius: "50%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <CrossIcon size={14} color="#8a7a65" />
           </div>
           <div onClick={(e) => e.stopPropagation()}>
@@ -5822,7 +5832,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
         const locked = catSkills ? catSkills.filter(s => s.tier !== "current") : [];
         const avgLevel = unlocked.length ? Math.round(unlocked.reduce((a, s) => a + (s.level || 0), 0) / unlocked.length) : 0;
         return (
-          <div onClick={() => setSkillDetail(null)} style={{
+          <div onClick={() => { setSkillDetail(null); playCloseMenu(); }} style={{
             position: "fixed", inset: 0, zIndex: 200,
             background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
             display: "flex", alignItems: "center", justifyContent: "center", padding: "20px",
@@ -6017,7 +6027,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
 
               {/* Close */}
               <div style={{ marginTop: "16px" }}>
-                <button onClick={() => setSkillDetail(null)} style={{
+                <button onClick={() => { setSkillDetail(null); playCloseMenu(); }} style={{
                   width: "100%", padding: "10px", borderRadius: "8px",
                   border: "1px solid rgba(255,255,255,0.08)",
                   background: "rgba(255,255,255,0.03)", color: "#8a7a65",
@@ -6047,7 +6057,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
           generateSteps={generateStepsForQuest}
           isGenerating={generatingSteps}
           initialValues={showQuestCreator !== true ? showQuestCreator : undefined}
-          onCancel={() => setShowQuestCreator(false)}
+          onCancel={() => { setShowQuestCreator(false); playCloseMenu(); }}
           onSave={(d) => {
             if (showQuestCreator !== true && showQuestCreator.id) {
               // Edit mode
@@ -6056,7 +6066,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
               // Create mode
               saveQuests([...quests, { ...d, id: `q${Date.now()}`, status: "active" }], "New quest created");
             }
-            setShowQuestCreator(false);
+            setShowQuestCreator(false); playCloseMenu();
           }}
         />
       )}
