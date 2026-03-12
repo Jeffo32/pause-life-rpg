@@ -2757,58 +2757,52 @@ function App() {
     } catch {}
   }, [getAudioCtx, playNote]);
 
-  // ── Sound File Playback (preload on first touch for iOS, instant replay after) ──
-  const soundCacheRef = useRef({});
-  const soundsPreloaded = useRef(false);
-  const ALL_SOUND_PATHS = useRef([
-    "Sounds/OOT_Navi_Hello1.wav", "Sounds/OOT_Navi_Hello2.wav", "Sounds/OOT_Navi_Hello3.wav",
-    "Sounds/OOT_Navi_Hello4.wav", "Sounds/OOT_Navi_Hello5.wav",
-    "Sounds/OOT_Navi_Hey1.wav", "Sounds/OOT_Navi_Hey2.wav", "Sounds/OOT_Navi_Hey3.wav",
-    "Sounds/OOT_Navi_Hey4.wav", "Sounds/OOT_Navi_Hey5.wav",
-    "Sounds/OOT_Navi_Listen1.wav", "Sounds/OOT_Navi_Listen2.wav", "Sounds/OOT_Navi_Listen3.wav",
-    "Sounds/OOT_Navi_Listen4.wav", "Sounds/OOT_Navi_Listen5.wav",
-    "Sounds/OOT_PauseMenu_Open.wav", "Sounds/OOT_PauseMenu_Close.wav",
-    "Sounds/OOT_xp_collected.wav", "Sounds/OOT_Selection.wav", "Sounds/OOT_NAV.wav",
-    "Sounds/OOT_select_quest.wav", "Sounds/OOT_open_drawer.wav", "Sounds/OOT_close_drawer.wav",
-    "Sounds/OOT_close_menu.wav",
-  ]);
+  // ── Sound File Playback (Web Audio API — lazy fetch, instant replay) ──
+  const audioCtxRef = useRef(null);
+  const bufferCacheRef = useRef({});
+  const fetchingRef = useRef({});
 
-  // Preload all sounds on first user interaction (iOS requires user gesture)
-  useEffect(() => {
-    const preload = () => {
-      if (soundsPreloaded.current) return;
-      soundsPreloaded.current = true;
-      ALL_SOUND_PATHS.current.forEach(path => {
-        if (!soundCacheRef.current[path]) {
-          const a = new Audio(path);
-          a.preload = "auto";
-          a.load();
-          soundCacheRef.current[path] = a;
-        }
-      });
-      document.removeEventListener("touchstart", preload, true);
-      document.removeEventListener("click", preload, true);
-    };
-    document.addEventListener("touchstart", preload, true);
-    document.addEventListener("click", preload, true);
-    return () => {
-      document.removeEventListener("touchstart", preload, true);
-      document.removeEventListener("click", preload, true);
-    };
+  const getAudioCtx = useCallback(() => {
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    const ctx = audioCtxRef.current;
+    if (ctx.state === 'suspended') ctx.resume();
+    return ctx;
   }, []);
 
   const playSound = useCallback((path) => {
     if (soundMutedRef.current) return;
     try {
-      if (!soundCacheRef.current[path]) {
-        soundCacheRef.current[path] = new Audio(path);
+      const ctx = getAudioCtx();
+
+      // Already decoded — play instantly
+      if (bufferCacheRef.current[path]) {
+        const src = ctx.createBufferSource();
+        src.buffer = bufferCacheRef.current[path];
+        const gain = ctx.createGain();
+        gain.gain.value = soundVolumeRef.current;
+        src.connect(gain).connect(ctx.destination);
+        src.start(0);
+        return;
       }
-      const audio = soundCacheRef.current[path];
-      audio.volume = soundVolumeRef.current;
-      audio.currentTime = 0;
-      audio.play().catch(() => {});
+
+      // Not yet fetched — fetch, decode, cache, then play
+      if (!fetchingRef.current[path]) {
+        fetchingRef.current[path] = fetch(path)
+          .then(r => r.arrayBuffer())
+          .then(buf => ctx.decodeAudioData(buf))
+          .then(decoded => { bufferCacheRef.current[path] = decoded; })
+          .catch(() => {})
+          .finally(() => { delete fetchingRef.current[path]; });
+
+        // Play via HTML5 Audio as fallback for this first call
+        const a = new Audio(path);
+        a.volume = soundVolumeRef.current;
+        a.play().catch(() => {});
+      }
     } catch {}
-  }, []);
+  }, [getAudioCtx]);
 
   const NAVI_SOUNDS = [
     "Sounds/OOT_Navi_Hello1.wav", "Sounds/OOT_Navi_Hello2.wav", "Sounds/OOT_Navi_Hello3.wav",
