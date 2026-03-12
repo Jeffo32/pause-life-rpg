@@ -1719,7 +1719,6 @@ function HeroScene({ expanded = false, equipment = null, onSlotPress = null, sel
                       e.currentTarget._ds = { x: t.clientX, y: t.clientY };
                       e.currentTarget._ha = true;
                       e.currentTarget._ht = setTimeout(() => {
-                        if (navigator.vibrate) navigator.vibrate(30);
                         onDragStart(item, "equipment", slot.id, t.clientX, t.clientY);
                       }, 250);
                     }}
@@ -1775,7 +1774,6 @@ function HeroScene({ expanded = false, equipment = null, onSlotPress = null, sel
                       e.currentTarget._ds = { x: t.clientX, y: t.clientY };
                       e.currentTarget._ha = true;
                       e.currentTarget._ht = setTimeout(() => {
-                        if (navigator.vibrate) navigator.vibrate(30);
                         onDragStart(item, "equipment", slot.id, t.clientX, t.clientY);
                       }, 250);
                     }}
@@ -1851,7 +1849,6 @@ function HeroScene({ expanded = false, equipment = null, onSlotPress = null, sel
                     e.currentTarget._ds = { x: t.clientX, y: t.clientY };
                     e.currentTarget._ha = true;
                     e.currentTarget._ht = setTimeout(() => {
-                      if (navigator.vibrate) navigator.vibrate(30);
                       onDragStart(item, "equipment", slot.id, t.clientX, t.clientY);
                     }, 250);
                   }}
@@ -2534,6 +2531,11 @@ function App() {
   const [soundMuted, setSoundMuted] = useState(() => {
     return localStorage.getItem("rpg-sound-muted") === "true";
   });
+  // Refs so playSound can read current values without re-creating the callback
+  const soundVolumeRef = useRef(soundVolume);
+  const soundMutedRef = useRef(soundMuted);
+  useEffect(() => { soundVolumeRef.current = soundVolume; }, [soundVolume]);
+  useEffect(() => { soundMutedRef.current = soundMuted; }, [soundMuted]);
   // Navi speech bubble
   const [naviMessage, setNaviMessage] = useState(null);
   const naviTimerRef = useRef(null);
@@ -2577,7 +2579,6 @@ function App() {
         }
       }
       if (hSlot && hSlot !== lastHoverSlotRef.current) {
-        if (navigator.vibrate) navigator.vibrate(10);
         lastHoverSlotRef.current = hSlot;
       } else if (!hSlot) lastHoverSlotRef.current = null;
     };
@@ -2592,7 +2593,7 @@ function App() {
           const slotDef = EQUIP_SLOTS.find(s => s.id === slotId);
           const dCat = dragItem.item.category || "", dSub = dragItem.item.subcategory || "";
           if (!(slotDef && slotDef.category === dCat && slotDef.subcategories.includes(dSub))) {
-            if (navigator.vibrate) navigator.vibrate([30,30,30]); break;
+            break;
           }
           const newEquip = JSON.parse(JSON.stringify(equipment));
           const oldInSlot = newEquip[slotId] ? { ...newEquip[slotId] } : null;
@@ -2609,7 +2610,6 @@ function App() {
             saveEquipment(newEquip);
           }
           dropped = true;
-          if (navigator.vibrate) navigator.vibrate(15);
           break;
         }
       }
@@ -2620,7 +2620,6 @@ function App() {
         delete uneq._equipped; delete uneq._slotId; delete uneq._slot;
         saveEquipment(newEquip);
         saveAssets([...assets, uneq]);
-        if (navigator.vibrate) navigator.vibrate(15);
       }
       setDragItem(null); setIsDragging(false); setHighlightSlots(false);
       window._isDragging = false; lastHoverSlotRef.current = null;
@@ -2762,17 +2761,17 @@ function App() {
   const soundCacheRef = useRef({});
 
   const playSound = useCallback((path) => {
-    if (soundMuted) return;
+    if (soundMutedRef.current) return;
     try {
       if (!soundCacheRef.current[path]) {
         soundCacheRef.current[path] = new Audio(path);
       }
       const audio = soundCacheRef.current[path];
-      audio.volume = soundVolume;
+      audio.volume = soundVolumeRef.current;
       audio.currentTime = 0;
       audio.play().catch(() => {});
     } catch {}
-  }, [soundMuted, soundVolume]);
+  }, []);
 
   const NAVI_SOUNDS = [
     "Sounds/OOT_Navi_Hello1.wav", "Sounds/OOT_Navi_Hello2.wav", "Sounds/OOT_Navi_Hello3.wav",
@@ -2797,11 +2796,6 @@ function App() {
   const playOpenDrawer = useCallback(() => playSound("Sounds/OOT_open_drawer.wav"), [playSound]);
   const playCloseDrawer = useCallback(() => playSound("Sounds/OOT_close_drawer.wav"), [playSound]);
   const playCloseMenu = useCallback(() => playSound("Sounds/OOT_close_menu.wav"), [playSound]);
-
-  // ── Haptic Feedback ──
-  const haptic = useCallback((duration = 10) => {
-    try { if (navigator.vibrate) navigator.vibrate(duration); } catch {}
-  }, []);
 
   // ── XP Calculation ──
   const getQuestXP = useCallback((quest) => {
@@ -3003,9 +2997,8 @@ function App() {
     setNaviMessage(msg);
     if (naviTimerRef.current) clearTimeout(naviTimerRef.current);
     naviTimerRef.current = setTimeout(() => setNaviMessage(null), 5000);
-    haptic(15);
     playNaviSound();
-  }, [haptic, playNaviSound]);
+  }, [playNaviSound]);
 
   // Periodic reminder check every 5 minutes
   useEffect(() => {
@@ -3346,6 +3339,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
       color: "#e8d5b5", fontFamily: "'Crimson Text', serif",
       position: "relative", overflow: "hidden",
       overscrollBehavior: "none", WebkitOverflowScrolling: "touch",
+      filter: `brightness(${brightness})`,
     }}>
       <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@400;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Fira+Code:wght@400&display=swap" rel="stylesheet" />
 
@@ -3387,7 +3381,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
           transition: "all 0.8s cubic-bezier(0.4, 0, 0.2, 1)",
         }}>
           {/* Hamburger Menu Button - top left */}
-          <div onClick={(e) => { e.stopPropagation(); setShowSettings(true); haptic(); playMenuOpen(); }} style={{
+          <div onClick={(e) => { e.stopPropagation(); setShowSettings(true); playMenuOpen(); }} style={{
             position: 'absolute', top: '50%', left: '16px', transform: 'translateY(-50%)',
             width: '36px', height: '36px', borderRadius: '10px',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -3524,7 +3518,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
                     ? `${SKILL_CATEGORIES_DATA[src.primary]?.label}+${SKILL_CATEGORIES_DATA[src.secondary]?.label}`
                     : SKILL_CATEGORIES_DATA[src.primary]?.label;
                   return (
-                    <div key={key} onClick={() => { setStatsExpanded(key); setStatCatOpen(null); setStatSkillOpen(null); playSelection(); haptic(10); }} style={{ cursor: "pointer" }}>
+                    <div key={key} onClick={() => { setStatsExpanded(key); setStatCatOpen(null); setStatSkillOpen(null); playSelection(); }} style={{ cursor: "pointer" }}>
                       <StatBar label={key} value={val} icon={STAT_ICONS[key]} subtitle={srcLabel} />
                     </div>
                   );
@@ -3603,7 +3597,6 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
               await awardXP(Math.round(xpAmount * 0.5), character);
               showXpSplash(xpAmount, challenge.skill);
             }
-            haptic(20);
             playXpCollected();
             playStepCompleteSound();
           };
@@ -4675,7 +4668,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
                           isCategory: true,
                           catSkills,
                         });
-                        playSelection(); haptic(10);
+                        playSelection();
                       } else if (node && node.type !== "hub") {
                         setSkillDetail({
                           name: node.name,
@@ -4686,7 +4679,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
                           color: node.color,
                           idx: node.idx,
                         });
-                        playSelection(); haptic(10);
+                        playSelection();
                       }
                     }
                   }
@@ -4856,8 +4849,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
                         e.currentTarget._dragStart = { x: startX, y: startY };
                         e.currentTarget._holdActive = true;
                         dragTimerRef.current = setTimeout(() => {
-                          if (navigator.vibrate) navigator.vibrate(30);
-                          dragPosRef.current = { x: startX, y: startY };
+                            dragPosRef.current = { x: startX, y: startY };
                           setDragItem({ item, source: "inventory", slotId: null, assetName: item.name });
                           setIsDragging(true);
                           setHighlightSlots(true);
@@ -4902,8 +4894,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
                             }
                           }
                           if (hoveringSlot && hoveringSlot !== lastHoverSlotRef.current) {
-                            if (navigator.vibrate) navigator.vibrate(10);
-                            lastHoverSlotRef.current = hoveringSlot;
+                                                lastHoverSlotRef.current = hoveringSlot;
                           } else if (!hoveringSlot) {
                             lastHoverSlotRef.current = null;
                           }
@@ -4927,7 +4918,6 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
                               const dragSub = dragItem.item.subcategory || "";
                               const allowed = slotDef && slotDef.category === dragCat && slotDef.subcategories.includes(dragSub);
                               if (!allowed) {
-                                if (navigator.vibrate) navigator.vibrate([30, 30, 30]);
                                 break;
                               }
                               const newEquip = JSON.parse(JSON.stringify(equipment));
@@ -4950,12 +4940,10 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
                                   else delete newEquip[dragItem.slotId];
                                   saveEquipment(newEquip);
                                 } else {
-                                  if (navigator.vibrate) navigator.vibrate([30, 30, 30]);
                                 }
                               }
                               dropped = true;
-                              if (navigator.vibrate) navigator.vibrate(15);
-                              break;
+                                                  break;
                             }
                           }
                           if (!dropped && dragItem.source === "equipment") {
@@ -5605,8 +5593,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
                 setReminders(updated);
                 saveData("rpg-reminders", updated);
                 setActiveNudge(null);
-                if (navigator.vibrate) navigator.vibrate(15);
-              }} style={{
+                    }} style={{
                 flex: 1, padding: "10px", borderRadius: "8px", cursor: "pointer",
                 background: "rgba(74,122,58,0.15)", border: "1px solid rgba(74,122,58,0.3)",
                 color: "#4ade80", fontFamily: "'Cinzel', serif", fontSize: "11px", letterSpacing: "0.5px",
@@ -6265,7 +6252,6 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
       }}>
         {tabs.map(tab => (
           <button key={tab.id} onClick={() => {
-            haptic(15);
             playNav();
             if (tab.id === "character" && activeTab === "character") {
               setHeroExpanded(prev => !prev);
@@ -6477,7 +6463,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
     {showSettings && ReactDOM.createPortal(
       <div style={{ position: 'fixed', inset: 0, zIndex: 9998, display: 'flex', justifyContent: 'center', alignItems: 'center', fontFamily: "'Crimson Text', serif" }}>
         {/* Backdrop */}
-        <div onClick={() => { setShowSettings(false); haptic(); playMenuClose(); }} style={{
+        <div onClick={() => { setShowSettings(false); playMenuClose(); }} style={{
           position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)',
         }} />
         {/* Panel */}
@@ -6488,7 +6474,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
           padding: '24px 20px', boxShadow: '0 0 60px rgba(0,0,0,0.8), 0 0 30px rgba(245,158,11,0.1)',
         }}>
           {/* Close button */}
-          <div onClick={() => { setShowSettings(false); haptic(); playMenuClose(); }} style={{
+          <div onClick={() => { setShowSettings(false); playMenuClose(); }} style={{
             position: 'absolute', top: '12px', right: '12px', width: '28px', height: '28px',
             display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
             color: '#8a7a65', fontSize: '18px', opacity: 0.7,
