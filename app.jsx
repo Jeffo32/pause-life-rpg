@@ -2757,8 +2757,45 @@ function App() {
     } catch {}
   }, [getAudioCtx, playNote]);
 
-  // ── Sound File Playback (HTML5 Audio — lazy creation on user gesture for iOS) ──
+  // ── Sound File Playback (preload on first touch for iOS, instant replay after) ──
   const soundCacheRef = useRef({});
+  const soundsPreloaded = useRef(false);
+  const ALL_SOUND_PATHS = useRef([
+    "Sounds/OOT_Navi_Hello1.wav", "Sounds/OOT_Navi_Hello2.wav", "Sounds/OOT_Navi_Hello3.wav",
+    "Sounds/OOT_Navi_Hello4.wav", "Sounds/OOT_Navi_Hello5.wav",
+    "Sounds/OOT_Navi_Hey1.wav", "Sounds/OOT_Navi_Hey2.wav", "Sounds/OOT_Navi_Hey3.wav",
+    "Sounds/OOT_Navi_Hey4.wav", "Sounds/OOT_Navi_Hey5.wav",
+    "Sounds/OOT_Navi_Listen1.wav", "Sounds/OOT_Navi_Listen2.wav", "Sounds/OOT_Navi_Listen3.wav",
+    "Sounds/OOT_Navi_Listen4.wav", "Sounds/OOT_Navi_Listen5.wav",
+    "Sounds/OOT_PauseMenu_Open.wav", "Sounds/OOT_PauseMenu_Close.wav",
+    "Sounds/OOT_xp_collected.wav", "Sounds/OOT_Selection.wav", "Sounds/OOT_NAV.wav",
+    "Sounds/OOT_select_quest.wav", "Sounds/OOT_open_drawer.wav", "Sounds/OOT_close_drawer.wav",
+    "Sounds/OOT_close_menu.wav",
+  ]);
+
+  // Preload all sounds on first user interaction (iOS requires user gesture)
+  useEffect(() => {
+    const preload = () => {
+      if (soundsPreloaded.current) return;
+      soundsPreloaded.current = true;
+      ALL_SOUND_PATHS.current.forEach(path => {
+        if (!soundCacheRef.current[path]) {
+          const a = new Audio(path);
+          a.preload = "auto";
+          a.load();
+          soundCacheRef.current[path] = a;
+        }
+      });
+      document.removeEventListener("touchstart", preload, true);
+      document.removeEventListener("click", preload, true);
+    };
+    document.addEventListener("touchstart", preload, true);
+    document.addEventListener("click", preload, true);
+    return () => {
+      document.removeEventListener("touchstart", preload, true);
+      document.removeEventListener("click", preload, true);
+    };
+  }, []);
 
   const playSound = useCallback((path) => {
     if (soundMutedRef.current) return;
@@ -6459,13 +6496,14 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
     </div>
 
     {/* ═══ SETTINGS PANEL — rendered via portal to bypass all overflow/stacking issues ═══ */}
-    {/* Brightness overlay — dims/brightens without breaking fixed positioning */}
+    {/* Brightness overlay — screen blend to brighten, multiply to dim */}
     {brightness !== 1 && ReactDOM.createPortal(
       <div style={{
         position: 'fixed', inset: 0, zIndex: 99999, pointerEvents: 'none',
-        background: brightness < 1
-          ? `rgba(0,0,0,${1 - brightness})`
-          : `rgba(255,255,255,${(brightness - 1) * 0.5})`,
+        mixBlendMode: brightness > 1 ? 'screen' : 'multiply',
+        background: brightness > 1
+          ? `rgba(${Math.round((brightness - 1) * 200)}, ${Math.round((brightness - 1) * 140)}, ${Math.round((brightness - 1) * 40)}, ${(brightness - 1) * 1.5})`
+          : `rgba(0,0,0,${(1 - brightness) * 1.2})`,
       }} />,
       document.body
     )}
