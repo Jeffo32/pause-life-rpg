@@ -2757,67 +2757,30 @@ function App() {
     } catch {}
   }, [getAudioCtx, playNote]);
 
-  // ── Sound File Playback (Web Audio API — preload on mount, instant replay) ──
-  const soundCacheRef = useRef({});  // path -> AudioBuffer
-  const ALL_SOUND_PATHS = [
+  // ── Sound File Playback (HTML5 Audio — lazy creation on user gesture for iOS) ──
+  const soundCacheRef = useRef({});
+
+  const playSound = useCallback((path) => {
+    if (soundMutedRef.current) return;
+    try {
+      if (!soundCacheRef.current[path]) {
+        soundCacheRef.current[path] = new Audio(path);
+      }
+      const audio = soundCacheRef.current[path];
+      audio.volume = soundVolumeRef.current;
+      audio.currentTime = 0;
+      audio.play().catch(() => {});
+    } catch {}
+  }, []);
+
+  const NAVI_SOUNDS = [
     "Sounds/OOT_Navi_Hello1.wav", "Sounds/OOT_Navi_Hello2.wav", "Sounds/OOT_Navi_Hello3.wav",
     "Sounds/OOT_Navi_Hello4.wav", "Sounds/OOT_Navi_Hello5.wav",
     "Sounds/OOT_Navi_Hey1.wav", "Sounds/OOT_Navi_Hey2.wav", "Sounds/OOT_Navi_Hey3.wav",
     "Sounds/OOT_Navi_Hey4.wav", "Sounds/OOT_Navi_Hey5.wav",
     "Sounds/OOT_Navi_Listen1.wav", "Sounds/OOT_Navi_Listen2.wav", "Sounds/OOT_Navi_Listen3.wav",
     "Sounds/OOT_Navi_Listen4.wav", "Sounds/OOT_Navi_Listen5.wav",
-    "Sounds/OOT_PauseMenu_Open.wav", "Sounds/OOT_PauseMenu_Close.wav",
-    "Sounds/OOT_xp_collected.wav", "Sounds/OOT_Selection.wav", "Sounds/OOT_NAV.wav",
-    "Sounds/OOT_select_quest.wav", "Sounds/OOT_open_drawer.wav", "Sounds/OOT_close_drawer.wav",
-    "Sounds/OOT_close_menu.wav",
   ];
-
-  // Preload all sounds as AudioBuffers on mount
-  useEffect(() => {
-    const ctx = getAudioCtx();
-    ALL_SOUND_PATHS.forEach(path => {
-      if (!soundCacheRef.current[path]) {
-        fetch(path)
-          .then(r => r.arrayBuffer())
-          .then(buf => ctx.decodeAudioData(buf))
-          .then(decoded => { soundCacheRef.current[path] = decoded; })
-          .catch(() => {});
-      }
-    });
-  }, [getAudioCtx]);
-
-  const playSound = useCallback((path) => {
-    if (soundMutedRef.current) return;
-    try {
-      const ctx = getAudioCtx();
-      const buffer = soundCacheRef.current[path];
-      if (buffer) {
-        const source = ctx.createBufferSource();
-        source.buffer = buffer;
-        const gain = ctx.createGain();
-        gain.gain.value = soundVolumeRef.current;
-        source.connect(gain).connect(ctx.destination);
-        source.start(0);
-      } else {
-        // Fallback: fetch and play immediately, cache for next time
-        fetch(path)
-          .then(r => r.arrayBuffer())
-          .then(buf => ctx.decodeAudioData(buf))
-          .then(decoded => {
-            soundCacheRef.current[path] = decoded;
-            const source = ctx.createBufferSource();
-            source.buffer = decoded;
-            const gain = ctx.createGain();
-            gain.gain.value = soundVolumeRef.current;
-            source.connect(gain).connect(ctx.destination);
-            source.start(0);
-          })
-          .catch(() => {});
-      }
-    } catch {}
-  }, [getAudioCtx]);
-
-  const NAVI_SOUNDS = ALL_SOUND_PATHS.slice(0, 15);
 
   const playNaviSound = useCallback(() => {
     const sound = NAVI_SOUNDS[Math.floor(Math.random() * NAVI_SOUNDS.length)];
