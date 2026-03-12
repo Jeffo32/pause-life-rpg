@@ -3339,7 +3339,6 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
       color: "#e8d5b5", fontFamily: "'Crimson Text', serif",
       position: "relative", overflow: "hidden",
       overscrollBehavior: "none", WebkitOverflowScrolling: "touch",
-      filter: `brightness(${brightness})`,
     }}>
       <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@400;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Fira+Code:wght@400&display=swap" rel="stylesheet" />
 
@@ -6460,6 +6459,17 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
     </div>
 
     {/* ═══ SETTINGS PANEL — rendered via portal to bypass all overflow/stacking issues ═══ */}
+    {/* Brightness overlay — dims/brightens without breaking fixed positioning */}
+    {brightness !== 1 && ReactDOM.createPortal(
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 99999, pointerEvents: 'none',
+        background: brightness < 1
+          ? `rgba(0,0,0,${1 - brightness})`
+          : `rgba(255,255,255,${(brightness - 1) * 0.5})`,
+      }} />,
+      document.body
+    )}
+
     {showSettings && ReactDOM.createPortal(
       <div style={{ position: 'fixed', inset: 0, zIndex: 9998, display: 'flex', justifyContent: 'center', alignItems: 'center', fontFamily: "'Crimson Text', serif" }}>
         {/* Backdrop */}
