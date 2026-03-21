@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PAUSE Character Prompt Generator</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0a0f;
+      color: #e0e0e0;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      padding: 24px;
+    }
+    h1 {
+      text-align: center;
+      color: #00e6c8;
+      font-size: 28px;
+      margin-bottom: 8px;
+      letter-spacing: 2px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 32px;
+      font-size: 14px;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .control-group {
+      background: #12121a;
+      border: 1px solid #1e1e2e;
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .control-group.full-width {
+      grid-column: 1 / -1;
+    }
+    label {
+      display: block;
+      color: #00e6c8;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+    select, input, textarea {
+      width: 100%;
+      background: #0a0a12;
+      border: 1px solid #2a2a3a;
+      color: #e0e0e0;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+    select:focus, input:focus, textarea:focus {
+      outline: none;
+      border-color: #00e6c8;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
+    .output-section {
+      margin-top: 24px;
+    }
+    .platform-tab-bar {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 0;
+    }
+    .platform-tab {
+      padding: 10px 20px;
+      background: #12121a;
+      border: 1px solid #1e1e2e;
+      border-bottom: none;
+      border-radius: 8px 8px 0 0;
+      color: #666;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    .platform-tab.active {
+      background: #1a1a28;
+      color: #00e6c8;
+      border-color: #00e6c8;
+      border-bottom: 1px solid #1a1a28;
+      margin-bottom: -1px;
+      z-index: 1;
+    }
+    .prompt-output {
+      background: #1a1a28;
+      border: 1px solid #00e6c8;
+      border-radius: 0 12px 12px 12px;
+      padding: 20px;
+      position: relative;
+    }
+    .prompt-text {
+      font-family: 'Fira Code', 'Consolas', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #c8c8d0;
+    }
+    .copy-btn {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: #00e6c8;
+      color: #0a0a0f;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .copy-btn:hover { background: #00ffdd; }
+    .copy-btn.copied { background: #4ade80; }
+    .color-palette {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+    .color-swatch {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      border: 2px solid #2a2a3a;
+      cursor: pointer;
+      position: relative;
+    }
+    .color-swatch:hover { border-color: #00e6c8; }
+    .color-swatch .tooltip {
+      display: none;
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #000;
+      color: #fff;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      white-space: nowrap;
+      margin-bottom: 4px;
+    }
+    .color-swatch:hover .tooltip { display: block; }
+    .section-title {
+      color: #00e6c8;
+      font-size: 16px;
+      margin: 24px 0 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #1e1e2e;
+    }
+    .chip-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .chip {
+      padding: 6px 12px;
+      background: #12121a;
+      border: 1px solid #2a2a3a;
+      border-radius: 20px;
+      color: #888;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+    .chip:hover { border-color: #00e6c8; color: #00e6c8; }
+    .chip.active { background: #00e6c820; border-color: #00e6c8; color: #00e6c8; }
+    .tip-box {
+      background: #0d1a17;
+      border-left: 3px solid #00e6c8;
+      padding: 12px 16px;
+      margin-top: 16px;
+      border-radius: 0 8px 8px 0;
+      font-size: 13px;
+      color: #88aa99;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>PAUSE CHARACTER PROMPTS</h1>
+    <p class="subtitle">Generate consistent character prompts for Midjourney, Grok, and NanoBanana</p>
+
+    <div class="controls">
+      <div class="control-group">
+        <label>Pose / Action</label>
+        <select id="pose">
+          <option value="standing">Standing (Default)</option>
+          <option value="walking">Walking</option>
+          <option value="sitting">Sitting Cross-legged</option>
+          <option value="running">Running</option>
+          <option value="combat">Combat Stance</option>
+          <option value="meditating">Meditating</option>
+          <option value="working">Working at Desk</option>
+          <option value="celebrating">Celebrating / Level Up</option>
+          <option value="exploring">Exploring</option>
+          <option value="custom">Custom Action...</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label>View / Camera</label>
+        <select id="view">
+          <option value="isometric">Isometric 3/4 (Default)</option>
+          <option value="front">Front View</option>
+          <option value="side">Side Profile</option>
+          <option value="portrait">Portrait / Close-up</option>
+          <option value="full-scene">Full Scene Wide</option>
+          <option value="turnaround">Character Turnaround Sheet</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label>Environment</label>
+        <select id="environment">
+          <option value="dark-simple">Dark Background (Simple)</option>
+          <option value="home-base">Home Base / Room</option>
+          <option value="training">Training Ground / Gym</option>
+          <option value="city">Cyberpunk City Street</option>
+          <option value="forest">Enchanted Forest</option>
+          <option value="arena">Battle Arena</option>
+          <option value="library">Library / Study</option>
+          <option value="market">Fantasy Marketplace</option>
+          <option value="mountain">Mountain Summit</option>
+          <option value="ocean">Ocean / Beach</option>
+          <option value="space">Space Station</option>
+          <option value="custom">Custom Environment...</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label>Mood / Lighting</label>
+        <select id="mood">
+          <option value="teal">Default Teal/Cyan</option>
+          <option value="combat">Combat Red/Orange</option>
+          <option value="victory">Victory Gold/Amber</option>
+          <option value="mystery">Mystery Purple/Violet</option>
+          <option value="nature">Nature Green/Emerald</option>
+          <option value="social">Social Pink/Magenta</option>
+          <option value="wealth">Wealth Gold/Teal</option>
+          <option value="wisdom">Wisdom Blue/White</option>
+        </select>
+      </div>
+
+      <div class="control-group full-width" id="custom-pose-group" style="display:none;">
+        <label>Custom Action Description</label>
+        <input type="text" id="custom-pose" placeholder="e.g. crafting a potion at a workbench">
+      </div>
+
+      <div class="control-group full-width" id="custom-env-group" style="display:none;">
+        <label>Custom Environment Description</label>
+        <input type="text" id="custom-env" placeholder="e.g. a floating island with waterfalls and crystals">
+      </div>
+
+      <div class="control-group full-width">
+        <label>Extra Details (optional)</label>
+        <textarea id="extras" placeholder="Add items, effects, companions, UI elements, etc."></textarea>
+      </div>
+    </div>
+
+    <div class="section-title">Character Color Palette</div>
+    <div class="color-palette">
+      <div class="color-swatch" style="background:#B07A56"><span class="tooltip">Skin #B07A56</span></div>
+      <div class="color-swatch" style="background:#C48B64"><span class="tooltip">Skin Hi #C48B64</span></div>
+      <div class="color-swatch" style="background:#9A6B48"><span class="tooltip">Skin Sh #9A6B48</span></div>
+      <div class="color-swatch" style="background:#2A1F1A"><span class="tooltip">Hair #2A1F1A</span></div>
+      <div class="color-swatch" style="background:#7BA3A3"><span class="tooltip">Jacket #7BA3A3</span></div>
+      <div class="color-swatch" style="background:#6B8E8E"><span class="tooltip">Jacket Mid #6B8E8E</span></div>
+      <div class="color-swatch" style="background:#F0EDE8"><span class="tooltip">Shirt #F0EDE8</span></div>
+      <div class="color-swatch" style="background:#3D2828"><span class="tooltip">Shorts #3D2828</span></div>
+      <div class="color-swatch" style="background:#F5F5F5"><span class="tooltip">Sneakers #F5F5F5</span></div>
+      <div class="color-swatch" style="background:#1A1A1A;border-color:#444"><span class="tooltip">Wristband #1A1A1A</span></div>
+    </div>
+
+    <div class="output-section">
+      <div class="platform-tab-bar">
+        <div class="platform-tab active" data-platform="midjourney">Midjourney</div>
+        <div class="platform-tab" data-platform="grok">Grok</div>
+        <div class="platform-tab" data-platform="nanobanana">NanoBanana</div>
+      </div>
+      <div class="prompt-output">
+        <button class="copy-btn" onclick="copyPrompt()">Copy</button>
+        <div class="prompt-text" id="prompt-output"></div>
+      </div>
+      <div class="tip-box" id="platform-tip"></div>
+    </div>
+  </div>
+
+  <script>
+    const CHARACTER_BASE = {
+      core: 'young Southeast Asian male, medium warm brown skin, short dark side-swept hair, almond-shaped dark brown eyes',
+      outfit: 'unbuttoned light teal denim jacket over white crew-neck t-shirt, dark maroon cargo shorts below knee, white chunky sneakers, black wristband on right wrist',
+      style: 'high-detail 32-bit pixel art',
+      expression: 'calm confident expression'
+    };
+
+    const POSES = {
+      standing: 'confident standing pose',
+      walking: 'walking forward mid-stride',
+      sitting: 'sitting cross-legged',
+      running: 'running dynamically, jacket flowing behind',
+      combat: 'combat-ready stance with fists raised',
+      meditating: 'meditating in lotus position, eyes closed, serene',
+      working: 'sitting at a desk working on a holographic screen',
+      celebrating: 'arms raised in celebration, golden particles swirling around',
+      exploring: 'looking ahead with hand shading eyes, adventurous stance'
+    };
+
+    const ENVIRONMENTS = {
+      'dark-simple': 'dark background with subtle ambient glow',
+      'home-base': 'cozy pixel art room with floating holographic screens, bookshelves, and glowing potted plants',
+      'training': 'pixel art training dojo with glowing equipment, floating stat bars and XP counters',
+      'city': 'neon-lit pixel art cyberpunk city street with glowing shop signs and NPC silhouettes',
+      'forest': 'lush enchanted pixel art forest with bioluminescent mushrooms and floating light particles',
+      'arena': 'dark battle arena with dramatic rim lighting and shadow creatures lurking',
+      'library': 'vast pixel art library with floating books, scroll interfaces, and warm candlelight',
+      'market': 'bustling pixel art fantasy marketplace with colorful item stalls and merchant NPCs',
+      'mountain': 'snow-capped pixel art mountain summit with clouds below and aurora in the sky',
+      'ocean': 'pixel art seaside with crashing waves, teal water, and golden sand',
+      'space': 'pixel art space station interior with starfield visible through windows and holographic consoles'
+    };
+
+    const MOODS = {
+      teal: 'teal and cyan',
+      combat: 'red and orange',
+      victory: 'gold and amber',
+      mystery: 'purple and violet',
+      nature: 'green and emerald',
+      social: 'warm pink and magenta',
+      wealth: 'gold and teal',
+      wisdom: 'deep blue and white'
+    };
+
+    const TIPS = {
+      midjourney: 'Tip: Use --cref [image_url] with your best reference image for maximum consistency. Add --cw 100 to weight the character reference fully. Use --sref for style consistency across scenes.',
+      grok: 'Tip: Upload your reference image and say "match this character exactly." In conversation chains, reference "the same character" to maintain consistency.',
+      nanobanana: 'Tip: Keep the same tag order every generation. Front-load the character details before the scene. Use the same seed if the platform supports it.'
+    };
+
+    let activePlatform = 'midjourney';
+
+    function getAspectRatio() {
+      const view = document.getElementById('view').value;
+      if (view === 'full-scene' || view === 'turnaround') return '16:9';
+      return '1:1';
+    }
+
+    function generatePrompt() {
+      const pose = document.getElementById('pose').value;
+      const view = document.getElementById('view').value;
+      const env = document.getElementById('environment').value;
+      const mood = document.getElementById('mood').value;
+      const extras = document.getElementById('extras').value.trim();
+
+      const poseText = pose === 'custom'
+        ? document.getElementById('custom-pose').value || 'standing'
+        : POSES[pose];
+
+      const envText = env === 'custom'
+        ? document.getElementById('custom-env').value || 'dark background'
+        : ENVIRONMENTS[env];
+
+      const moodText = MOODS[mood];
+      const ar = getAspectRatio();
+
+      let viewText = '';
+      if (view === 'isometric') viewText = 'isometric view';
+      else if (view === 'front') viewText = 'front-facing view';
+      else if (view === 'side') viewText = 'side profile view';
+      else if (view === 'portrait') viewText = 'portrait close-up, chest and above';
+      else if (view === 'full-scene') viewText = 'wide scene, isometric view';
+      else if (view === 'turnaround') viewText = 'character turnaround sheet showing front, side, back, and 3/4 views';
+
+      let prompt = '';
+
+      if (activePlatform === 'midjourney') {
+        const parts = [
+          view === 'turnaround' ? 'pixel art character turnaround reference sheet' : 'isometric pixel art character',
+          CHARACTER_BASE.core,
+          CHARACTER_BASE.expression,
+          CHARACTER_BASE.outfit,
+          poseText,
+          envText,
+          `${moodText} accent lighting`,
+          CHARACTER_BASE.style,
+          viewText,
+          view !== 'portrait' ? 'full body' : ''
+        ];
+        if (extras) parts.push(extras);
+        prompt = parts.filter(Boolean).join(', ');
+        prompt += ` --ar ${ar} --s 750 --style raw --v 6.1`;
+
+      } else if (activePlatform === 'grok') {
+        prompt = `Create ${view === 'turnaround' ? 'a pixel art character turnaround reference sheet of' : 'an isometric pixel art scene featuring'} a ${CHARACTER_BASE.core}. He has a ${CHARACTER_BASE.expression} and wears ${CHARACTER_BASE.outfit}. He is ${poseText} in ${envText}. The lighting uses ${moodText} tones. Render in ${CHARACTER_BASE.style} with clean anti-aliased edges. ${viewText}${view !== 'portrait' ? ', full body visible' : ''}.`;
+        if (extras) prompt += ` Additional details: ${extras}.`;
+
+      } else if (activePlatform === 'nanobanana') {
+        const parts = [
+          'isometric pixel art',
+          CHARACTER_BASE.core,
+          CHARACTER_BASE.outfit,
+          poseText,
+          envText,
+          `${moodText} lighting`,
+          '32-bit high-detail pixel art',
+          viewText
+        ];
+        if (extras) parts.push(extras);
+        prompt = parts.filter(Boolean).join(', ');
+      }
+
+      document.getElementById('prompt-output').textContent = prompt;
+      document.getElementById('platform-tip').textContent = TIPS[activePlatform];
+    }
+
+    function copyPrompt() {
+      const text = document.getElementById('prompt-output').textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.querySelector('.copy-btn');
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = 'Copy';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    }
+
+    // Event listeners
+    document.querySelectorAll('.platform-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.platform-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        activePlatform = tab.dataset.platform;
+        generatePrompt();
+      });
+    });
+
+    document.querySelectorAll('select, input, textarea').forEach(el => {
+      el.addEventListener('change', generatePrompt);
+      el.addEventListener('input', generatePrompt);
+    });
+
+    document.getElementById('pose').addEventListener('change', (e) => {
+      document.getElementById('custom-pose-group').style.display = e.target.value === 'custom' ? 'block' : 'none';
+    });
+
+    document.getElementById('environment').addEventListener('change', (e) => {
+      document.getElementById('custom-env-group').style.display = e.target.value === 'custom' ? 'block' : 'none';
+    });
+
+    // Initial generation
+    generatePrompt();
+  </script>
+</body>
+</html>
