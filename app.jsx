@@ -2757,8 +2757,8 @@ function App() {
     } catch {}
   }, [getAudioCtx, playNote]);
 
-  // ── Sound File Playback (HTML5 Audio — first-gesture preload for instant replay) ──
-  const soundCacheRef = useRef({});
+  // ── Sound File Playback (Web Audio API — decoded buffers for zero-latency playback) ──
+  const soundBufferCacheRef = useRef({});
   const soundsPreloadedRef = useRef(false);
 
   const ALL_SOUND_PATHS = [
@@ -2774,17 +2774,24 @@ function App() {
     "Sounds/OOT_close_menu.wav",
   ];
 
-  // Preload all Audio elements on first user gesture (iOS requires gesture to load media)
+  const decodeSound = useCallback(async (path) => {
+    try {
+      const ctx = getAudioCtx();
+      const res = await fetch(path);
+      const arrayBuffer = await res.arrayBuffer();
+      const buffer = await new Promise((resolve, reject) =>
+        ctx.decodeAudioData(arrayBuffer, resolve, reject)
+      );
+      soundBufferCacheRef.current[path] = buffer;
+    } catch {}
+  }, [getAudioCtx]);
+
+  // Decode all sounds into AudioBuffers on first user gesture (iOS requires gesture to unlock audio)
   const preloadSounds = useCallback(() => {
     if (soundsPreloadedRef.current) return;
     soundsPreloadedRef.current = true;
-    ALL_SOUND_PATHS.forEach(path => {
-      const audio = new Audio(path);
-      audio.preload = "auto";
-      audio.load();
-      soundCacheRef.current[path] = audio;
-    });
-  }, []);
+    ALL_SOUND_PATHS.forEach(path => { decodeSound(path); });
+  }, [decodeSound]);
 
   useEffect(() => {
     const handler = () => { preloadSounds(); window.removeEventListener("pointerdown", handler); };
@@ -2795,15 +2802,21 @@ function App() {
   const playSound = useCallback((path) => {
     if (soundMutedRef.current) return;
     try {
-      if (!soundCacheRef.current[path]) {
-        soundCacheRef.current[path] = new Audio(path);
+      const ctx = getAudioCtx();
+      const buffer = soundBufferCacheRef.current[path];
+      if (!buffer) {
+        decodeSound(path);
+        return;
       }
-      const audio = soundCacheRef.current[path];
-      audio.volume = soundVolumeRef.current;
-      audio.currentTime = 0;
-      audio.play().catch(() => {});
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      const gain = ctx.createGain();
+      gain.gain.value = soundVolumeRef.current;
+      source.connect(gain);
+      gain.connect(ctx.destination);
+      source.start(0);
     } catch {}
-  }, []);
+  }, [getAudioCtx, decodeSound]);
 
   const NAVI_SOUNDS = ALL_SOUND_PATHS.slice(0, 15);
 
