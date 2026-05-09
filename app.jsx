@@ -5794,7 +5794,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
       {/* Daily Card Overlay */}
       {showCardOverlay && dailyCard && (
         <div onClick={() => { if (!dailyFlipped) { revealDailyCard(); } }} style={{ position: "fixed", inset: 0, zIndex: 2500, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.92)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" }}>
-          <div onClick={(e) => { e.stopPropagation(); setShowCardOverlay(false); setCardCopied(false); playCloseMenu(); }} style={{ position: "absolute", top: "16px", right: "16px", cursor: "pointer", width: "36px", height: "36px", borderRadius: "50%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div onClick={(e) => { e.stopPropagation(); setShowCardOverlay(false); setCardCopied(false); playCloseMenu(); }} style={{ position: "absolute", top: "calc(16px + env(safe-area-inset-top, 0px))", right: "16px", cursor: "pointer", width: "36px", height: "36px", borderRadius: "50%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <CrossIcon size={14} color="#8a7a65" />
           </div>
           <div onClick={(e) => e.stopPropagation()}>
