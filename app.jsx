@@ -2430,47 +2430,26 @@ Respond with ONLY valid JSON, no markdown or backticks:
 // ─── THEMES (Wolfe Co + Fantasy) ──────────────────────────────────────────────
 
 const THEMES = {
-  fantasy: {
-    key: "fantasy",
-    name: "PAUSE",
-    label: "Fantasy",
-    bg: "#0d0a07",
-    surface: "rgba(30,25,18,0.95)",
-    surfaceAlt: "rgba(20,16,12,0.98)",
-    text: "#e8d5b5",
-    textMuted: "#8a7a65",
+  gold: {
+    key: "gold",
+    name: "Gold",
     accent: "#f5c842",
     accentAlt: "#f59e0b",
-    border: "rgba(245,158,11,0.2)",
-    borderLight: "rgba(245,158,11,0.3)",
-    panelGlow: "rgba(245,158,11,0.03)",
     headerBg: "linear-gradient(180deg, rgba(13,10,7,0.9) 0%, rgba(13,10,7,0.7) 60%, rgba(13,10,7,0) 100%)",
-    fontDisplay: "'Cinzel Decorative', serif",
-    fontBody: "'Crimson Text', serif",
-    fontLabel: "'Cinzel', serif",
-    labelSpacing: "4px",
-    titleShadow: "0 0 40px rgba(245,158,11,0.3), 0 2px 4px rgba(0,0,0,0.5)",
   },
-  wolfe: {
-    key: "wolfe",
-    name: "WOLFE",
-    label: "Wolfe Co",
-    bg: "#171618",
-    surface: "#222125",
-    surfaceAlt: "#1c1b1f",
-    text: "#CFBFAA",
-    textMuted: "#7E8A8E",
-    accent: "#CE703F",
-    accentAlt: "#5C8A8A",
-    border: "rgba(207,191,170,0.15)",
-    borderLight: "rgba(207,191,170,0.25)",
-    panelGlow: "rgba(206,112,63,0.04)",
-    headerBg: "linear-gradient(180deg, rgba(23,22,24,0.95) 0%, rgba(34,33,37,0.9) 65%, transparent 100%)",
-    fontDisplay: "'Inter Tight', system-ui, -apple-system, sans-serif",
-    fontBody: "'Inter', system-ui, -apple-system, sans-serif",
-    fontLabel: "'Space Mono', ui-monospace, monospace",
-    labelSpacing: "2.5px",
-    titleShadow: "0 2px 8px rgba(0,0,0,0.6)",
+  teal: {
+    key: "teal",
+    name: "Teal",
+    accent: "#5C8A8A",
+    accentAlt: "#4a7a7a",
+    headerBg: "linear-gradient(180deg, rgba(13,10,7,0.9) 0%, rgba(13,10,7,0.7) 60%, rgba(13,10,7,0) 100%)",
+  },
+  crimson: {
+    key: "crimson",
+    name: "Crimson",
+    accent: "#c45a5a",
+    accentAlt: "#a84a4a",
+    headerBg: "linear-gradient(180deg, rgba(13,10,7,0.9) 0%, rgba(13,10,7,0.7) 60%, rgba(13,10,7,0) 100%)",
   }
 };
 
@@ -2478,10 +2457,10 @@ const THEMES = {
 
 function App() {
   const [activeTab, setActiveTab] = useState("character");
-  const [themeMode, setThemeMode] = useState("fantasy");
+  const [themeMode, setThemeMode] = useState("gold");
   const [character, setCharacter] = useState(null);
 
-  const t = THEMES[themeMode] || THEMES.fantasy;
+  const t = THEMES[themeMode] || THEMES.gold;
   if (typeof window !== "undefined") window.__rpgTheme = themeMode;
   const [skills, setSkills] = useState(null);
   const [quests, setQuests] = useState(null);
@@ -3120,8 +3099,8 @@ function App() {
       ]);
       const journal = await loadData("rpg-journal", {});
       const lastDailyXp = await loadData("rpg-last-daily-xp", null);
-      const savedTheme = await loadData("rpg-theme", "fantasy");
-      if (savedTheme === "wolfe" || savedTheme === "fantasy") {
+      const savedTheme = await loadData("rpg-theme", "gold");
+      if (["gold", "teal", "crimson"].includes(savedTheme)) {
         setThemeMode(savedTheme);
       }
 
@@ -3491,56 +3470,23 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
             </svg>
           </div>
           <div style={{
-            fontSize: "8px", color: t.textMuted, letterSpacing: t.labelSpacing, fontFamily: t.fontLabel,
+            fontSize: "8px", color: "#8a7a65", letterSpacing: "4px", fontFamily: "'Cinzel', serif",
             textTransform: "uppercase", marginBottom: "2px",
-          }}>{t.name}</div>
+          }}>PAUSE</div>
           <h1 style={{
-            margin: 0, fontSize: "22px", fontFamily: t.fontDisplay,
-            color: t.accent, letterSpacing: t.key === "wolfe" ? "-0.02em" : "3px",
-            textShadow: t.titleShadow,
+            margin: 0, fontSize: "22px", fontFamily: "'Cinzel Decorative', serif",
+            color: t.accent, letterSpacing: "3px",
+            textShadow: "0 0 40px rgba(245,158,11,0.3), 0 2px 4px rgba(0,0,0,0.5)",
           }}>LIFE RPG</h1>
           <div style={{
             width: "140px", height: "1px", margin: "4px auto",
             background: `linear-gradient(90deg, transparent, ${t.accent}40, transparent)`,
           }} />
 
-          {/* Theme Switcher — far right (before date) */}
-          <div style={{
-            position: 'absolute', top: '50%', right: '90px', transform: 'translateY(-50%)',
-            display: 'flex', gap: '3px', zIndex: 52,
-          }}>
-            {Object.keys(THEMES).map(key => {
-              const th = THEMES[key];
-              const active = themeMode === key;
-              return (
-                <div
-                  key={key}
-                  onClick={() => saveTheme(key)}
-                  style={{
-                    padding: '3px 8px 2px',
-                    borderRadius: '5px',
-                    fontSize: '7px',
-                    fontFamily: active ? th.fontLabel : "'Cinzel', serif",
-                    letterSpacing: active ? th.labelSpacing : '0.5px',
-                    textTransform: 'uppercase',
-                    color: active ? th.accent : t.textMuted,
-                    background: active ? 'rgba(255,255,255,0.06)' : 'transparent',
-                    border: active ? `1px solid ${th.accent}30` : '1px solid rgba(255,255,255,0.06)',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    userSelect: 'none',
-                  }}
-                >
-                  {th.name}
-                </div>
-              );
-            })}
-          </div>
-
           {/* Date display - top right */}
           <div style={{
             position: 'absolute', top: '50%', right: '16px', transform: 'translateY(-50%)',
-            fontSize: '10px', color: t.textMuted, fontFamily: t.fontLabel,
+            fontSize: '10px', color: '#8a7a65', fontFamily: "'Cinzel', serif",
             letterSpacing: '1px', textAlign: 'right',
           }}>
             {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -6373,13 +6319,11 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
       <div style={{
         position: "fixed", bottom: "max(12px, env(safe-area-inset-bottom, 12px))", left: "50%", transform: "translateX(-50%)",
         zIndex: 100, display: "flex", gap: "2px", padding: "6px 10px",
-        background: t.key === "wolfe" ? "rgba(34,33,37,0.92)" : "rgba(13, 10, 7, 0.9)",
+        background: "rgba(13, 10, 7, 0.9)",
         backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
         borderRadius: "16px",
         border: `1px solid ${t.border}`,
-        boxShadow: t.key === "wolfe"
-          ? "0 8px 32px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04)"
-          : "0 8px 32px rgba(0,0,0,0.6), 0 0 60px rgba(245,158,11,0.05), inset 0 1px 0 rgba(255,255,255,0.05)",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.6), 0 0 60px rgba(245,158,11,0.05), inset 0 1px 0 rgba(255,255,255,0.05)",
         opacity: mounted ? 1 : 0, transform: mounted ? "translateX(-50%) translateY(0)" : "translateX(-50%) translateY(20px)",
         transition: "opacity 0.6s 0.4s, transform 0.6s 0.4s",
       }}>
@@ -6394,12 +6338,12 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
             }
           }} style={{
             padding: "6px 8px", fontSize: "8px", cursor: "pointer",
-            fontFamily: t.fontLabel, letterSpacing: "0.5px", border: "none",
+            fontFamily: "'Cinzel', serif", letterSpacing: "0.5px", border: "none",
             borderRadius: "10px",
             background: activeTab === tab.id
               ? `linear-gradient(145deg, ${t.accent}30, ${t.accent}10)`
               : "transparent",
-            color: activeTab === tab.id ? t.accent : t.textMuted,
+            color: activeTab === tab.id ? t.accent : "#6b5d4a",
             transition: "all 0.3s",
             textTransform: "uppercase",
             display: "flex", flexDirection: "column", alignItems: "center", gap: "2px",
@@ -6615,8 +6559,8 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
         <div style={{
           position: 'relative', width: '90%', maxWidth: '400px', maxHeight: '85vh', overflowY: 'auto',
           background: 'linear-gradient(145deg, rgba(26,21,14,0.98), rgba(13,10,7,0.98))',
-          border: '1px solid rgba(245,158,11,0.3)', borderRadius: '16px',
-          padding: '24px 20px', boxShadow: '0 0 60px rgba(0,0,0,0.8), 0 0 30px rgba(245,158,11,0.1)',
+          border: `1px solid ${t.accent}30`, borderRadius: '16px',
+          padding: '24px 20px', boxShadow: `0 0 60px rgba(0,0,0,0.8), 0 0 30px ${t.accent}10`,
         }}>
           {/* Close button */}
           <div onClick={() => { setShowSettings(false); playMenuClose(); }} style={{
@@ -6627,8 +6571,8 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
 
           <h2 style={{
             margin: '0 0 20px', fontSize: '18px', fontFamily: "'Cinzel Decorative', serif",
-            color: '#f5c842', letterSpacing: '2px', textAlign: 'center',
-            textShadow: '0 0 20px rgba(245,158,11,0.3)',
+            color: t.accent, letterSpacing: '2px', textAlign: 'center',
+            textShadow: `0 0 20px ${t.accent}30`,
           }}>Settings</h2>
 
           {/* ── Data Backup ── */}
@@ -6692,6 +6636,36 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
               onChange={(e) => setBrightness(parseFloat(e.target.value))}
               style={{ width: '100%', accentColor: '#f59e0b' }}
             />
+          </div>
+
+          {/* ── Theme ── */}
+          <div style={{ marginBottom: '8px' }}>
+            <div style={{ fontSize: '11px', color: '#8a7a65', letterSpacing: '2px', fontFamily: "'Cinzel', serif", marginBottom: '10px', textTransform: 'uppercase' }}>
+              Theme
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              {Object.entries(THEMES).map(([key, th]) => (
+                <div
+                  key={key}
+                  onClick={() => saveTheme(key)}
+                  style={{
+                    flex: 1,
+                    padding: '10px 8px',
+                    borderRadius: '8px',
+                    textAlign: 'center',
+                    fontSize: '12px',
+                    fontFamily: "'Cinzel', serif",
+                    letterSpacing: '1px',
+                    cursor: 'pointer',
+                    background: themeMode === key ? `${th.accent}20` : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${themeMode === key ? th.accent : 'rgba(255,255,255,0.08)'}`,
+                    color: themeMode === key ? th.accent : '#8a7a65',
+                  }}
+                >
+                  {th.name}
+                </div>
+              ))}
+            </div>
           </div>
 
         </div>
