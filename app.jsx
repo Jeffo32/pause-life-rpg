@@ -2466,6 +2466,7 @@ function App() {
   const [levelUpOverlay, setLevelUpOverlay] = useState(null);
   const [undoState, setUndoState] = useState(null);
   const [showQuestCreator, setShowQuestCreator] = useState(false);
+  const [clearQuestsArmed, setClearQuestsArmed] = useState(false);
   const [journalEntries, setJournalEntries] = useState({});
   const [journalStep, setJournalStep] = useState(0);
   const [journalDraft, setJournalDraft] = useState({ amazing: "", learned: "", grateful: "" });
@@ -3810,9 +3811,25 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
 
             <Panel>
               <SectionHeader icon={<ScrollIcon />} title="Quest Log" subtitle="Active missions and objectives" />
-              <div style={{ marginBottom: "10px" }}>
+              <div style={{ marginBottom: "10px", display: "flex", gap: "8px", flexWrap: "wrap" }}>
                 <ActionBtn onClick={() => setShowQuestCreator(true)}>+ NEW QUEST</ActionBtn>
+                {quests.length > 0 && (
+                  <ActionBtn danger onClick={() => {
+                    if (clearQuestsArmed) {
+                      saveQuests([], "All quests cleared");
+                      setClearQuestsArmed(false);
+                    } else {
+                      setClearQuestsArmed(true);
+                      setTimeout(() => setClearQuestsArmed(false), 3000);
+                    }
+                  }}>{clearQuestsArmed ? "TAP AGAIN TO WIPE" : "CLEAR ALL"}</ActionBtn>
+                )}
               </div>
+              {quests.length === 0 && (
+                <div style={{ fontSize: "11px", color: "#6b5d4a", fontStyle: "italic", fontFamily: "'Crimson Text', serif", padding: "6px 2px 2px" }}>
+                  No quests yet. Tap <span style={{ color: "#c4a882" }}>+ NEW QUEST</span> to add one — describe it and let the AI build it, or fill it in manually.
+                </div>
+              )}
 
               {[
                 { key: "main", label: "Main Quests", icon: <CrossedSwordsIcon size={11} />, color: "#f59e0b" },
