@@ -1271,7 +1271,8 @@ function saveBackup() {
 function loadBackup() {
   const raw = localStorage.getItem("rpg-backup");
   if (!raw) return null;
-  const data = JSON.parse(raw);
+  let data;
+  try { data = JSON.parse(raw); } catch { return null; }
   let count = 0;
   for (const [key, val] of Object.entries(data)) {
     if (key.startsWith("rpg-")) { localStorage.setItem(key, JSON.stringify(val)); count++; }
@@ -1467,7 +1468,68 @@ function LifeCard({ card, isRevealing = false, isFlipped = false, onFlip, small 
 // ─── HERO SCENE (Spatial Parallax) ──────────────────────────────────────────
 
 function HeroScene({ expanded = false, equipment = null, onSlotPress = null, selectedSlotId = null, registerSlotRef = null, highlightSlots = false, dragCategory = null, dragSubcategory = null, onDragStart = null, onToggle = null, characterLevel = 1 }) {
-  // Orientation / gyro / parallax-tilt effects removed — static full-width video.
+  // Orientation/gyro/parallax-tilt removed. Horizontal drag scrubs the spin video; release resumes playback.
+  const videoRef = useRef(null);
+  const wrapRef = useRef(null);
+  const onToggleRef = useRef(onToggle);
+  onToggleRef.current = onToggle;
+
+  useEffect(() => {
+    const vid = videoRef.current;
+    const wrap = wrapRef.current;
+    if (!vid || !wrap) return;
+    // gesture state shared across handlers (effect runs once)
+    const g = { active: false, startX: 0, startY: 0, startTime: 0, axis: null, moved: false };
+    const pt = (e) => (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]) || e;
+
+    const onStart = (e) => {
+      const p = pt(e);
+      g.active = true; g.startX = p.clientX; g.startY = p.clientY;
+      g.startTime = vid.currentTime || 0; g.axis = null; g.moved = false;
+    };
+    const onMove = (e) => {
+      if (!g.active) return;
+      const p = pt(e);
+      const dx = p.clientX - g.startX;
+      const dy = p.clientY - g.startY;
+      if (!g.axis) {
+        if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;        // wait for intent
+        g.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";         // lock axis
+        if (g.axis === "x") { try { vid.pause(); } catch (_) {} } // pause while scrubbing
+      }
+      if (g.axis !== "x") return;                                 // vertical → let the page scroll
+      g.moved = true;
+      if (e.cancelable) e.preventDefault();                       // block scroll during a scrub
+      const dur = vid.duration || 5;
+      const w = wrap.getBoundingClientRect().width || 1;          // one box-width = one full loop
+      let t = g.startTime + (dx / w) * dur;
+      t = ((t % dur) + dur) % dur;                                // wrap so it scrubs endlessly both ways
+      vid.currentTime = t;
+    };
+    const onEnd = () => {
+      if (!g.active) return;
+      g.active = false;
+      if (g.axis === "x") { vid.play().catch(() => {}); }         // resume playing after a scrub
+      else if (!g.moved) { onToggleRef.current && onToggleRef.current(); } // clean tap → toggle
+    };
+
+    wrap.addEventListener("touchstart", onStart, { passive: true });
+    wrap.addEventListener("touchmove", onMove, { passive: false });
+    wrap.addEventListener("touchend", onEnd, { passive: true });
+    wrap.addEventListener("touchcancel", onEnd, { passive: true });
+    wrap.addEventListener("mousedown", onStart);
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onEnd);
+    return () => {
+      wrap.removeEventListener("touchstart", onStart);
+      wrap.removeEventListener("touchmove", onMove);
+      wrap.removeEventListener("touchend", onEnd);
+      wrap.removeEventListener("touchcancel", onEnd);
+      wrap.removeEventListener("mousedown", onStart);
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onEnd);
+    };
+  }, []);
 
   return (
     <Panel>
@@ -1505,13 +1567,15 @@ function HeroScene({ expanded = false, equipment = null, onSlotPress = null, sel
           background: "radial-gradient(ellipse at 50% 100%, rgba(245,158,11,0.12), transparent 70%)",
         }} />
 
-        {/* Character spin video — fills the box; tap to toggle equipment */}
-        <div onClick={() => onToggle && onToggle()} style={{
+        {/* Character spin video — fills the box; drag horizontally to scrub, release to resume, tap toggles equipment */}
+        <div ref={wrapRef} style={{
           position: "absolute", inset: 0, cursor: onToggle ? "pointer" : "default",
+          touchAction: "pan-y",
         }}>
-          <video src="Videos/profile-spin.mp4" poster={CHARACTER_IMG} autoPlay loop muted playsInline preload="auto" disablePictureInPicture draggable={false} onContextMenu={(e) => e.preventDefault()} style={{
+          <video ref={videoRef} src="Videos/profile-spin.mp4?v=3" poster={CHARACTER_IMG} autoPlay loop muted playsInline preload="auto" disablePictureInPicture draggable={false} onContextMenu={(e) => e.preventDefault()} style={{
             width: "100%", height: "100%", objectFit: "cover", display: "block",
-            WebkitTouchCallout: "none",
+            touchAction: "pan-y",
+            WebkitTouchCallout: "none", WebkitUserSelect: "none", userSelect: "none",
           }} />
         </div>
 
@@ -2060,7 +2124,7 @@ function QuestCreator({ onSave, onCancel, generateSteps, isGenerating, initialVa
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
+          model: "claude-sonnet-4-6",
           max_tokens: 1000,
           messages: [{
             role: "user",
@@ -2311,6 +2375,8 @@ const THEMES = {
     name: "Gold",
     accent: "#f5c842",
     accentAlt: "#f59e0b",
+    bg: "#0d0a07",
+    border: "rgba(245,158,11,0.2)",
     headerBg: "linear-gradient(180deg, rgba(13,10,7,0.9) 0%, rgba(13,10,7,0.7) 60%, rgba(13,10,7,0) 100%)",
   },
   teal: {
@@ -2318,6 +2384,8 @@ const THEMES = {
     name: "Teal",
     accent: "#5C8A8A",
     accentAlt: "#4a7a7a",
+    bg: "#0d0a07",
+    border: "rgba(92,138,138,0.25)",
     headerBg: "linear-gradient(180deg, rgba(13,10,7,0.9) 0%, rgba(13,10,7,0.7) 60%, rgba(13,10,7,0) 100%)",
   },
   crimson: {
@@ -2325,6 +2393,8 @@ const THEMES = {
     name: "Crimson",
     accent: "#c45a5a",
     accentAlt: "#a84a4a",
+    bg: "#0d0a07",
+    border: "rgba(196,90,90,0.25)",
     headerBg: "linear-gradient(180deg, rgba(13,10,7,0.9) 0%, rgba(13,10,7,0.7) 60%, rgba(13,10,7,0) 100%)",
   }
 };
@@ -2444,6 +2514,7 @@ function App() {
   useEffect(() => { soundMutedRef.current = soundMuted; }, [soundMuted]);
   // Navi speech bubble
   const [naviMessage, setNaviMessage] = useState(null);
+  const [naviPop, setNaviPop] = useState(0); // increments on each activation to retrigger the summon animation
   const naviTimerRef = useRef(null);
 
   // Persist brightness & sound settings
@@ -2943,6 +3014,7 @@ function App() {
   const showNaviMessage = useCallback(() => {
     const msg = NAVI_MESSAGES[Math.floor(Math.random() * NAVI_MESSAGES.length)];
     setNaviMessage(msg);
+    setNaviPop(p => p + 1); // fire the lively summon animation
     if (naviTimerRef.current) clearTimeout(naviTimerRef.current);
     naviTimerRef.current = setTimeout(() => setNaviMessage(null), 5000);
     playNaviSound();
@@ -3017,7 +3089,7 @@ function App() {
           const catLabel = SKILL_CATEGORIES_DATA[focusCat]?.label || "Growth";
           const aiRes = await fetch("/api/claude", {
             method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 200,
+            body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 200,
               messages: [{ role: "user", content: "Generate one motivational quote for a dark fantasy RPG life app. Theme: " + catLabel + ". User is an entrepreneur-creator focused on sovereignty, execution, family legacy. Respond ONLY with JSON no backticks: " + JSON.stringify({quote:"under 15 words",category:catLabel,rarity:"common|rare|epic|legendary"}) }],
             }),
           });
@@ -3198,7 +3270,7 @@ function App() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
+          model: "claude-sonnet-4-6",
           max_tokens: 1000,
           messages: [{
             role: "user",
@@ -6091,7 +6163,8 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
           borderRadius: "14px 14px 4px 14px",
           boxShadow: "0 4px 20px rgba(0,0,0,0.5), 0 0 20px rgba(147,220,255,0.08)",
           backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)",
-          animation: "fadeSlideDown 0.3s ease",
+          animation: "naviBubbleIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)",
+          transformOrigin: "bottom right",
           cursor: "pointer",
         }}>
           <div style={{
@@ -6109,22 +6182,31 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
       <div onClick={showNaviMessage} style={{
         position: "fixed", bottom: "calc(82px + env(safe-area-inset-bottom, 0px))", right: "16px", zIndex: 150,
         width: "48px", height: "48px", borderRadius: "50%",
-        background: "rgba(10,8,6,0.7)",
-        border: "1px solid rgba(147,220,255,0.15)",
-        boxShadow: "0 4px 20px rgba(0,0,0,0.5), 0 0 20px rgba(147,220,255,0.06)",
+        background: naviMessage ? "rgba(16,14,10,0.8)" : "rgba(10,8,6,0.7)",
+        border: naviMessage ? "1px solid rgba(147,220,255,0.45)" : "1px solid rgba(147,220,255,0.15)",
+        boxShadow: naviMessage
+          ? "0 4px 20px rgba(0,0,0,0.5), 0 0 30px rgba(147,220,255,0.4)"
+          : "0 4px 20px rgba(0,0,0,0.5), 0 0 20px rgba(147,220,255,0.06)",
         display: "flex", alignItems: "center", justifyContent: "center",
-        cursor: "pointer", transition: "all 0.3s",
+        cursor: "pointer", transition: "background 0.3s, border 0.3s, box-shadow 0.3s",
         backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)",
-        animation: "fairyBob 3s ease-in-out infinite",
+        // gentle idle bob; livelier bob+pulse while Navi is talking
+        animation: naviMessage ? "fairyBobActive 1.3s ease-in-out infinite" : "fairyBob 3s ease-in-out infinite",
       }}>
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" style={{ animation: "fairyGlow 2s ease-in-out infinite" }}>
-          <circle cx="12" cy="12" r="2" fill="rgba(180,230,255,0.9)"/>
-          <circle cx="12" cy="12" r="4" fill="none" stroke="rgba(147,220,255,0.2)" strokeWidth="0.5"/>
-          <path d="M10 12 Q5 8 7 4 Q9 8 10 12" fill="rgba(147,220,255,0.15)" stroke="rgba(147,220,255,0.5)" strokeWidth="0.7"/>
-          <path d="M14 12 Q19 8 17 4 Q15 8 14 12" fill="rgba(147,220,255,0.15)" stroke="rgba(147,220,255,0.5)" strokeWidth="0.7"/>
-          <path d="M10 12 Q5 16 7 20 Q9 16 10 12" fill="rgba(147,220,255,0.08)" stroke="rgba(147,220,255,0.3)" strokeWidth="0.5"/>
-          <path d="M14 12 Q19 16 17 20 Q15 16 14 12" fill="rgba(147,220,255,0.08)" stroke="rgba(147,220,255,0.3)" strokeWidth="0.5"/>
-        </svg>
+        {/* keyed inner layer: remounts on each activation to replay the one-shot springy summon */}
+        <div key={naviPop} style={{
+          display: "flex", alignItems: "center", justifyContent: "center",
+          animation: naviPop ? "naviSummon 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)" : "none",
+        }}>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" style={{ animation: naviMessage ? "fairyGlow 1s ease-in-out infinite" : "fairyGlow 2s ease-in-out infinite" }}>
+            <circle cx="12" cy="12" r="2" fill="rgba(180,230,255,0.9)"/>
+            <circle cx="12" cy="12" r="4" fill="none" stroke="rgba(147,220,255,0.2)" strokeWidth="0.5"/>
+            <path d="M10 12 Q5 8 7 4 Q9 8 10 12" fill="rgba(147,220,255,0.15)" stroke="rgba(147,220,255,0.5)" strokeWidth="0.7"/>
+            <path d="M14 12 Q19 8 17 4 Q15 8 14 12" fill="rgba(147,220,255,0.15)" stroke="rgba(147,220,255,0.5)" strokeWidth="0.7"/>
+            <path d="M10 12 Q5 16 7 20 Q9 16 10 12" fill="rgba(147,220,255,0.08)" stroke="rgba(147,220,255,0.3)" strokeWidth="0.5"/>
+            <path d="M14 12 Q19 16 17 20 Q15 16 14 12" fill="rgba(147,220,255,0.08)" stroke="rgba(147,220,255,0.3)" strokeWidth="0.5"/>
+          </svg>
+        </div>
       </div>
 
       
@@ -6193,7 +6275,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
 
 {/* Floating Dock Navigation */}
       <div style={{
-        position: "fixed", bottom: "max(12px, env(safe-area-inset-bottom, 12px))", left: "50%", transform: "translateX(-50%)",
+        position: "fixed", bottom: "max(12px, env(safe-area-inset-bottom, 12px))", left: "50%",
         zIndex: 100, display: "flex", gap: "2px", padding: "6px 10px",
         background: "rgba(13, 10, 7, 0.9)",
         backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
@@ -6327,6 +6409,24 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
         @keyframes fairyBob {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-3px); }
+        }
+        @keyframes fairyBobActive {
+          0%, 100% { transform: translateY(0) scale(1); }
+          25% { transform: translateY(-6px) scale(1.07); }
+          50% { transform: translateY(-2px) scale(1.02); }
+          75% { transform: translateY(-7px) scale(1.05); }
+        }
+        @keyframes naviSummon {
+          0%   { transform: translateY(0) scale(0.9) rotate(0deg); }
+          30%  { transform: translateY(-12px) scale(1.4) rotate(-10deg); }
+          55%  { transform: translateY(-3px) scale(1.1) rotate(7deg); }
+          78%  { transform: translateY(-6px) scale(1.22) rotate(-4deg); }
+          100% { transform: translateY(0) scale(1) rotate(0deg); }
+        }
+        @keyframes naviBubbleIn {
+          0%   { opacity: 0; transform: translateY(8px) scale(0.8); }
+          60%  { opacity: 1; transform: translateY(-2px) scale(1.05); }
+          100% { opacity: 1; transform: translateY(0) scale(1); }
         }
         @keyframes auraPulse {
           0%, 100% { opacity: 1; transform: translateX(-50%) scale(1); }

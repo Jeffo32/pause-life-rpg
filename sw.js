@@ -1,4 +1,4 @@
-const CACHE_NAME = 'life-rpg-v3';
+const CACHE_NAME = 'life-rpg-v4';
 const ASSETS = ['/', '/index.html', '/app.jsx'];
 
 self.addEventListener('install', (e) => {
@@ -15,12 +15,11 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  if (e.request.url.includes('api.anthropic.com')) {
-    e.respondWith(fetch(e.request).catch(() => new Response('{"error":"offline"}', { headers: { 'Content-Type': 'application/json' }})));
-    return;
-  }
+  // Only handle GET. POST/PUT/etc (e.g. the /api/claude proxy) pass straight
+  // through to the network — the Cache API rejects non-GET requests.
+  if (e.request.method !== 'GET') return;
 
-  // Network-first: always try to get the latest, fall back to cache for offline
+  // Network-first: latest when online, fall back to cache for offline.
   e.respondWith(
     fetch(e.request).then(res => {
       if (res.status === 200) {
