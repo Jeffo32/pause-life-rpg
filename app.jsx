@@ -1467,137 +1467,17 @@ function LifeCard({ card, isRevealing = false, isFlipped = false, onFlip, small 
 // ─── HERO SCENE (Spatial Parallax) ──────────────────────────────────────────
 
 function HeroScene({ expanded = false, equipment = null, onSlotPress = null, selectedSlotId = null, registerSlotRef = null, highlightSlots = false, dragCategory = null, dragSubcategory = null, onDragStart = null, onToggle = null, characterLevel = 1 }) {
-  const containerRef = useRef(null);
-  const tiltRef = useRef({ x: 0, y: 0 });
-  const smoothRef = useRef({ x: 0, y: 0 });
-  const rafRef = useRef(null);
-  const gyroEnabledRef = useRef(false);
-
-  // Prevent scroll while dragging on avatar
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const handler = (e) => {
-      if (el._didDrag) e.preventDefault();
-    };
-    el.addEventListener("touchmove", handler, { passive: false });
-    return () => el.removeEventListener("touchmove", handler);
-  }, []);
-
-  // Request gyroscope permission on first interaction (iOS requirement)
-  useEffect(() => {
-    const requestGyro = async () => {
-      if (gyroEnabledRef.current) return;
-      if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function") {
-        try {
-          const perm = await DeviceOrientationEvent.requestPermission();
-          if (perm === "granted") gyroEnabledRef.current = true;
-        } catch (e) {}
-      } else {
-        gyroEnabledRef.current = true;
-      }
-    };
-    // Try on mount (works on Android), also listen for first touch (iOS)
-    requestGyro();
-    const touchHandler = () => { requestGyro(); window.removeEventListener("touchstart", touchHandler); };
-    window.addEventListener("touchstart", touchHandler, { once: true });
-    return () => window.removeEventListener("touchstart", touchHandler);
-  }, []);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const handleOrientation = (e) => {
-      if (e.gamma === null || e.beta === null) return;
-      // gamma = left/right tilt (-90 to 90), beta = front/back tilt (-180 to 180)
-      tiltRef.current = {
-        x: Math.max(-20, Math.min(20, e.gamma)) / 20,
-        y: Math.max(-20, Math.min(20, (e.beta - 40))) / 20,
-      };
-    };
-
-    const handleMouse = (e) => {
-      if (!container) return;
-      const rect = container.getBoundingClientRect();
-      tiltRef.current = {
-        x: ((e.clientX - rect.left) / rect.width - 0.5) * 2,
-        y: ((e.clientY - rect.top) / rect.height - 0.5) * 2,
-      };
-    };
-
-    // Smooth interpolation loop - Apple-style eased movement
-    const animate = () => {
-      const lerp = 0.08; // smoothing factor - lower = smoother/slower
-      smoothRef.current.x += (tiltRef.current.x - smoothRef.current.x) * lerp;
-      smoothRef.current.y += (tiltRef.current.y - smoothRef.current.y) * lerp;
-
-      const layers = container.querySelectorAll("[data-depth]");
-      layers.forEach(layer => {
-        const depth = parseFloat(layer.dataset.depth) || 0;
-        const moveX = smoothRef.current.x * depth * 12;
-        const moveY = smoothRef.current.y * depth * 8;
-        layer.style.transform = `translate3d(${moveX}px, ${moveY}px, 0)`;
-      });
-      rafRef.current = requestAnimationFrame(animate);
-    };
-
-    window.addEventListener("deviceorientation", handleOrientation);
-    container.addEventListener("mousemove", handleMouse);
-    rafRef.current = requestAnimationFrame(animate);
-
-    return () => {
-      window.removeEventListener("deviceorientation", handleOrientation);
-      container.removeEventListener("mousemove", handleMouse);
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
-  }, []);
+  // Orientation / gyro / parallax-tilt effects removed — static full-width video.
 
   return (
     <Panel>
-      <div ref={containerRef}
-        onTouchStart={(e) => {
-          const t = e.touches[0];
-          containerRef.current._touchStart = { x: t.clientX, y: t.clientY, time: Date.now() };
-          containerRef.current._didDrag = false;
-        }}
-        onTouchMove={(e) => {
-          if (!containerRef.current?._touchStart) return;
-          const t = e.touches[0];
-          const dx = t.clientX - containerRef.current._touchStart.x;
-          const dy = t.clientY - containerRef.current._touchStart.y;
-          if (Math.abs(dx) > 5 || Math.abs(dy) > 5) containerRef.current._didDrag = true;
-          const rect = containerRef.current.getBoundingClientRect();
-          tiltRef.current = {
-            x: Math.max(-1, Math.min(1, dx / (rect.width * 0.3))),
-            y: Math.max(-1, Math.min(1, dy / (rect.height * 0.3))),
-          };
-        }}
-        onTouchEnd={() => {
-          if (!containerRef.current?._didDrag) {
-            const elapsed = Date.now() - (containerRef.current?._touchStart?.time || 0);
-            if (elapsed < 300) onToggle && onToggle();
-          }
-          tiltRef.current = { x: 0, y: 0 };
-          containerRef.current._touchStart = null;
-        }}
-        onMouseMove={(e) => {
-          if (!containerRef.current) return;
-          const rect = containerRef.current.getBoundingClientRect();
-          tiltRef.current = {
-            x: ((e.clientX - rect.left) / rect.width - 0.5) * 2,
-            y: ((e.clientY - rect.top) / rect.height - 0.5) * 2,
-          };
-        }}
-        onMouseLeave={() => { tiltRef.current = { x: 0, y: 0 }; }}
-        style={{
-        height: expanded ? "460px" : "200px",
-        borderRadius: "6px", overflow: "hidden",
-        background: "radial-gradient(ellipse at 50% 100%, rgba(245,158,11,0.06), transparent 70%)",
-        border: "1px solid rgba(245,158,11,0.1)",
-        position: "relative", perspective: "800px",
-        cursor: "pointer",
-        transition: "height 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+      <div style={{
+        width: "100%",
+        aspectRatio: "1 / 1",
+        borderRadius: "8px", overflow: "hidden",
+        background: "#000",
+        border: "1px solid rgba(255,255,255,0.06)",
+        position: "relative",
       }}>
         {/* Background layer - slow movement */}
         <div data-depth="0.3" style={{
@@ -1625,17 +1505,13 @@ function HeroScene({ expanded = false, equipment = null, onSlotPress = null, sel
           background: "radial-gradient(ellipse at 50% 100%, rgba(245,158,11,0.12), transparent 70%)",
         }} />
 
-        {/* Character image - main layer */}
-        <div data-depth="1.0" style={{
-          position: "absolute", inset: 0, display: "flex", alignItems: "flex-end", justifyContent: "center",
-          paddingBottom: expanded ? "20px" : "10px",
+        {/* Character spin video — fills the box; tap to toggle equipment */}
+        <div onClick={() => onToggle && onToggle()} style={{
+          position: "absolute", inset: 0, cursor: onToggle ? "pointer" : "default",
         }}>
-          <img src={CHARACTER_IMG} alt="Character" draggable={false} onContextMenu={(e) => e.preventDefault()} style={{
+          <video src="Videos/profile-spin.mp4" poster={CHARACTER_IMG} autoPlay loop muted playsInline preload="auto" disablePictureInPicture draggable={false} onContextMenu={(e) => e.preventDefault()} style={{
+            width: "100%", height: "100%", objectFit: "cover", display: "block",
             WebkitTouchCallout: "none",
-            height: expanded ? "400px" : "170px",
-            objectFit: "contain",
-            filter: "drop-shadow(0 4px 20px rgba(245,158,11,0.15)) drop-shadow(0 0 40px rgba(245,158,11,0.08)) contrast(1.1) brightness(1.05)",
-            transition: "height 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
           }} />
         </div>
 
@@ -3442,7 +3318,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
         background: "radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.6) 100%)",
       }} />
 
-      <div style={{ position: "relative", zIndex: 2, maxWidth: "900px", margin: "0 auto", padding: "0 10px", paddingBottom: activeTab === "character" ? (heroExpanded ? "80px" : "0") : "80px", height: "100vh", overflowY: (activeTab === "character" && !heroExpanded) ? "hidden" : "auto", overflowX: "hidden", background: t.bg }}>
+      <div style={{ position: "relative", zIndex: 2, maxWidth: "900px", margin: "0 auto", padding: "0 10px", paddingBottom: "80px", height: "100vh", overflowY: "auto", overflowX: "hidden", background: t.bg }}>
 
         {/* Title Banner — Liquid Glass (fixed) */}
         <div style={{
