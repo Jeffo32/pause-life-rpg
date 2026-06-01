@@ -818,6 +818,13 @@ const DEFAULT_SKILLS = [
   { name: "Death Awareness", category: "spirit", tier: "undiscovered", level: 0 },
 ];
 
+const BUSINESSES = [
+  { key: "belvu", label: "Belvu", color: "#f59e0b" },
+  { key: "mosaic", label: "Mosaic", color: "#5C8A8A" },
+  { key: "wolfe", label: "Wolfe Co", color: "#c49a6a" },
+  { key: "life", label: "Life / Mission", color: "#9c7bd4" },
+];
+
 const DEFAULT_QUESTS = [
   // ── SIDE QUESTS ──────────────────────────────────────────────────────────────
   { id: "sq1", name: "Photography: Milestones School", type: "side", status: "active", description: "Photography project for Milestones School", xpReward: null, steps: [
@@ -2097,6 +2104,7 @@ function QuestCreator({ onSave, onCancel, generateSteps, isGenerating, initialVa
   const [name, setName] = useState(initialValues?.name || "");
   const [description, setDescription] = useState(initialValues?.description || "");
   const [type, setType] = useState(initialValues?.type || "main");
+  const [business, setBusiness] = useState(initialValues?.business || "life");
   const [xpReward, setXpReward] = useState(initialValues?.xpReward || "");
   const [steps, setSteps] = useState(initialValues?.steps || []);
   const [newStep, setNewStep] = useState("");
@@ -2206,6 +2214,14 @@ Respond with ONLY valid JSON, no markdown or backticks:
               <option value="main">Main Quest</option>
               <option value="side">Side Quest</option>
               <option value="misc">Miscellaneous</option>
+            </select>
+          </div>
+
+          <div style={{ marginBottom: "12px" }}>
+            <label style={labelStyle}>Business / Area</label>
+            <select value={business} onChange={e => setBusiness(e.target.value)}
+              style={{ ...inputStyle, background: "rgba(0,0,0,0.4)" }}>
+              {BUSINESSES.map(b => <option key={b.key} value={b.key}>{b.label}</option>)}
             </select>
           </div>
 
@@ -2348,7 +2364,7 @@ Respond with ONLY valid JSON, no markdown or backticks:
           <div style={{ display: "flex", gap: "8px", marginTop: "14px" }}>
             <button onClick={() => {
               if (!name.trim()) return;
-              onSave({ name, description, type, xpReward: xpReward ? Number(xpReward) : null, steps: steps.length > 0 ? steps : [{ text: "Complete this quest", done: false }] });
+              onSave({ name, description, type, business, xpReward: xpReward ? Number(xpReward) : null, steps: steps.length > 0 ? steps : [{ text: "Complete this quest", done: false }] });
             }} style={{
               flex: 1, padding: "10px", background: "linear-gradient(145deg, rgba(245,158,11,0.3), rgba(245,158,11,0.1))",
               border: "1px solid rgba(245,158,11,0.4)", borderRadius: "6px", color: "#f5c842",
@@ -3831,25 +3847,41 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
                 </div>
               )}
 
+              {quests.length > 0 && (
+                <div style={{
+                  display: "flex", gap: "0px", flexWrap: "wrap",
+                  padding: "2px 2px 8px", marginBottom: "2px",
+                  borderBottom: "1px solid rgba(245,158,11,0.06)",
+                }}>
+                  {[{ key: "all", label: "All", color: "#f5c842" }, ...BUSINESSES].map(b => {
+                    const isActive = mainQuestTab === b.key;
+                    return (
+                      <div key={b.key}
+                        onClick={() => { setMainQuestTab(b.key); playSelectQuest(); }}
+                        style={{
+                          padding: "4px 9px", fontSize: "9px", fontFamily: "'Cinzel', serif",
+                          letterSpacing: "1px", textTransform: "uppercase", cursor: "pointer",
+                          color: isActive ? b.color : "#6b5d4a",
+                          borderBottom: isActive ? `2px solid ${b.color}` : "2px solid transparent",
+                          transition: "color 0.2s, border-color 0.2s", userSelect: "none",
+                        }}
+                      >{b.label}</div>
+                    );
+                  })}
+                </div>
+              )}
+
               {[
                 { key: "main", label: "Main Quests", icon: <CrossedSwordsIcon size={11} />, color: "#f59e0b" },
                 { key: "side", label: "Side Quests", icon: <PinIcon size={11} />, color: "#8a7a65" },
                 { key: "misc", label: "Miscellaneous", icon: <MiscIcon size={11} />, color: "#6b5d4a" },
               ].map(category => {
                 const allInCategory = quests.filter(q => q.type === category.key && q.status === "active");
-                if (allInCategory.length === 0) return null;
-                const isCollapsed = collapsedCategories[category.key];
-
-                // Sub-tab filtering for main quests
-                const mainSubTabs = [
-                  { key: "all", label: "All" },
-                  { key: "belvu", label: "Belvu / Ops" },
-                  { key: "tech", label: "Tech / Build" },
-                  { key: "self", label: "Self / Mission" },
-                ];
-                const filtered = category.key === "main" && mainQuestTab !== "all"
-                  ? allInCategory.filter(q => q.id.startsWith(mainQuestTab + "-"))
+                const filtered = mainQuestTab !== "all"
+                  ? allInCategory.filter(q => (q.business || "life") === mainQuestTab)
                   : allInCategory;
+                if (filtered.length === 0) return null;
+                const isCollapsed = collapsedCategories[category.key];
 
                 return (
                   <div key={category.key} style={{ marginBottom: "8px" }}>
@@ -3874,39 +3906,9 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
                       }}>{filtered.length}</span>
                     </div>
 
-                    {/* Sub-tabs for Main Quests */}
-                    {category.key === "main" && !isCollapsed && (
-                      <div style={{
-                        display: "flex", gap: "0px", padding: "6px 4px 2px",
-                        borderBottom: "1px solid rgba(245,158,11,0.06)",
-                      }}>
-                        {mainSubTabs.map(tab => {
-                          const isActive = mainQuestTab === tab.key;
-                          return (
-                            <div
-                              key={tab.key}
-                              onClick={(e) => { e.stopPropagation(); setMainQuestTab(tab.key); playSelectQuest(); }}
-                              style={{
-                                padding: "4px 10px",
-                                fontSize: "9px",
-                                fontFamily: "'Cinzel', serif",
-                                letterSpacing: "1.5px",
-                                textTransform: "uppercase",
-                                cursor: "pointer",
-                                color: isActive ? "#f5c842" : "#6b5d4a",
-                                borderBottom: isActive ? "2px solid #f59e0b" : "2px solid transparent",
-                                transition: "color 0.2s, border-color 0.2s",
-                                userSelect: "none",
-                              }}
-                            >{tab.label}</div>
-                          );
-                        })}
-                      </div>
-                    )}
-
                     {/* Quest List - smooth drawer */}
                     <div style={{
-                      maxHeight: isCollapsed ? "0px" : `${filtered.length * 300}px`,
+                      maxHeight: isCollapsed ? "0px" : `${filtered.length * 300 + (filtered.some(q => q.id === expandedQuest) ? 2000 : 0)}px`,
                       overflow: "hidden",
                       transition: isCollapsed
                         ? "max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s"
@@ -3918,6 +3920,7 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
                           const progress = getQuestProgress(quest);
                           const isExpanded = expandedQuest === quest.id;
                           const nextObj = getNextObjective(quest);
+                          const biz = BUSINESSES.find(b => b.key === (quest.business || "life"));
 
                           return (
                             <div key={quest.id} style={{ borderBottom: "1px solid rgba(245,158,11,0.04)" }}>
@@ -3939,6 +3942,14 @@ Return ONLY a JSON array of strings, no other text. Example: ["Step 1 text", "St
                                     whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                                   }}>{quest.name}</div>
                                 </div>
+                                {biz && (
+                                  <span style={{
+                                    fontSize: "7px", fontFamily: "'Cinzel', serif", letterSpacing: "0.5px",
+                                    textTransform: "uppercase", flexShrink: 0, whiteSpace: "nowrap",
+                                    color: biz.color, padding: "2px 5px", borderRadius: "3px",
+                                    background: biz.color + "1a", border: "1px solid " + biz.color + "40",
+                                  }}>{biz.label}</span>
+                                )}
                                 <span style={{
                                   fontSize: "9px", fontFamily: "'Fira Code', monospace",
                                   color: progress === 100 ? "#4a7a3a" : "#5a4f40", flexShrink: 0,
